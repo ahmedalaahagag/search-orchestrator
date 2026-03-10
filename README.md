@@ -163,7 +163,6 @@ If `nil` is passed, the orchestrator uses the raw query string with simple white
 | **query** | `pkg/query` | OpenSearch DSL builder (queries, filters, facets, pagination) |
 | **opensearch** | `pkg/opensearch` | OpenSearch HTTP client and response types |
 | **observability** | `pkg/observability` | Prometheus metrics and structured logging |
-| **qus** | `pkg/qus` | HTTP client for external QUS services |
 
 ## Search Config Reference
 
