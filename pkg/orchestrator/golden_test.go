@@ -103,19 +103,16 @@ func goldenOSClient(responses []goldenOSResponse) *mockOSClient {
 	return &mockOSClient{responses: osResponses}
 }
 
-func goldenQUSClient(g *goldenQUS) *mockQUSClient {
-	if g == nil || !g.Available {
-		return &mockQUSClient{err: assert.AnError}
-	}
-	return &mockQUSClient{resp: g.Response}
-}
 
 func TestGoldenBehavior(t *testing.T) {
 	cases := loadGoldenTests(t)
 
 	for _, tc := range cases {
 		t.Run(tc.Name, func(t *testing.T) {
-			qusClient := goldenQUSClient(tc.QUS)
+			var qusResp *model.QUSAnalyzeResponse
+			if tc.QUS != nil && tc.QUS.Available {
+				qusResp = tc.QUS.Response
+			}
 			osClient := goldenOSClient(tc.OS)
 
 			logger := logrus.New()
@@ -123,7 +120,7 @@ func TestGoldenBehavior(t *testing.T) {
 			metrics := observability.NewMetrics()
 			cfg := testSearchConfig()
 			planner := NewPlanner(cfg)
-			orch := New(logger, metrics, qusClient, osClient, planner, cfg)
+			orch := New(logger, metrics, osClient, planner, cfg)
 
 			req := model.SearchRequest{
 				Query:   tc.Input.Query,
@@ -141,7 +138,7 @@ func TestGoldenBehavior(t *testing.T) {
 				req.Sort = "relevance"
 			}
 
-			resp, err := orch.Search(context.Background(), req)
+			resp, err := orch.Search(context.Background(), req, qusResp)
 			require.NoError(t, err)
 
 			assert.Equal(t, tc.Expected.Stage, resp.Meta.Stage)

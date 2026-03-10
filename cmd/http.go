@@ -11,11 +11,10 @@ import (
 	"time"
 
 	"github.com/ahmedalaahagag/search-orchestrator/internal/api"
+	"github.com/ahmedalaahagag/search-orchestrator/pkg/config"
 	"github.com/ahmedalaahagag/search-orchestrator/pkg/observability"
 	"github.com/ahmedalaahagag/search-orchestrator/pkg/opensearch"
-	"github.com/ahmedalaahagag/search-orchestrator/pkg/qus"
 	"github.com/ahmedalaahagag/search-orchestrator/pkg/orchestrator"
-	"github.com/ahmedalaahagag/search-orchestrator/pkg/config"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -53,11 +52,6 @@ func runHTTP(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("loading search config: %w", err)
 	}
 
-	qusClient := qus.NewClient(qus.ClientConfig{
-		BaseURL: cfg.QUS.URL,
-		Timeout: cfg.QUS.Timeout,
-	})
-
 	osClient := opensearch.NewClient(opensearch.ClientConfig{
 		URL:      cfg.OpenSearch.URL,
 		Username: cfg.OpenSearch.Username,
@@ -66,7 +60,7 @@ func runHTTP(cmd *cobra.Command, args []string) error {
 	})
 
 	planner := orchestrator.NewPlanner(searchCfg)
-	orch := orchestrator.New(logger, metrics, qusClient, osClient, planner, searchCfg)
+	orch := orchestrator.New(logger, metrics, osClient, planner, searchCfg)
 
 	router := api.NewRouter(logger, orch, metrics)
 

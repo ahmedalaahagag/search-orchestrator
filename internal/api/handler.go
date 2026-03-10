@@ -32,7 +32,7 @@ func searchHandler(logger *logrus.Logger, orch *orchestrator.Orchestrator, metri
 
 		applyDefaults(&req)
 
-		resp, err := orch.Search(r.Context(), req)
+		resp, err := orch.Search(r.Context(), req, nil)
 		if err != nil {
 			metrics.RequestsTotal.WithLabelValues("error").Inc()
 			logger.WithError(err).Error("search failed")

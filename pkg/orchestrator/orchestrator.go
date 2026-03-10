@@ -6,19 +6,17 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ahmedalaahagag/search-orchestrator/pkg/config"
+	"github.com/ahmedalaahagag/search-orchestrator/pkg/model"
 	"github.com/ahmedalaahagag/search-orchestrator/pkg/observability"
 	"github.com/ahmedalaahagag/search-orchestrator/pkg/opensearch"
-	"github.com/ahmedalaahagag/search-orchestrator/pkg/qus"
-	"github.com/ahmedalaahagag/search-orchestrator/pkg/model"
 	"github.com/ahmedalaahagag/search-orchestrator/pkg/query"
-	"github.com/ahmedalaahagag/search-orchestrator/pkg/config"
 	"github.com/sirupsen/logrus"
 )
 
 type Orchestrator struct {
 	logger  *logrus.Logger
 	metrics *observability.Metrics
-	qus     qus.QUSClient
 	os      opensearch.OpenSearchClient
 	planner *Planner
 	cfg     config.SearchConfig
@@ -27,7 +25,6 @@ type Orchestrator struct {
 func New(
 	logger *logrus.Logger,
 	metrics *observability.Metrics,
-	qusClient qus.QUSClient,
 	osClient opensearch.OpenSearchClient,
 	planner *Planner,
 	cfg config.SearchConfig,
@@ -35,18 +32,16 @@ func New(
 	return &Orchestrator{
 		logger:  logger,
 		metrics: metrics,
-		qus:     qusClient,
 		os:      osClient,
 		planner: planner,
 		cfg:     cfg,
 	}
 }
 
-func (o *Orchestrator) Search(ctx context.Context, req model.SearchRequest) (*model.SearchResponse, error) {
-	// Step 1: Call QUS with graceful fallback.
-	qusResp, warnings := o.callQUS(ctx, req)
-
+func (o *Orchestrator) Search(ctx context.Context, req model.SearchRequest, qusResp *model.QUSAnalyzeResponse) (*model.SearchResponse, error) {
+	var warnings []string
 	if qusResp != nil {
+		warnings = append(warnings, qusResp.Warnings...)
 		o.logger.WithFields(logrus.Fields{
 			"normalized_query": qusResp.NormalizedQuery,
 			"tokens":           len(qusResp.Tokens),
@@ -56,7 +51,7 @@ func (o *Orchestrator) Search(ctx context.Context, req model.SearchRequest) (*mo
 		}).Info("QUS analysis result")
 	}
 
-	// Step 2: Build search plan.
+	// Build search plan.
 	plan := o.planner.BuildPlan(req, qusResp)
 
 	o.logger.WithFields(logrus.Fields{
@@ -99,31 +94,6 @@ func (o *Orchestrator) Search(ctx context.Context, req model.SearchRequest) (*mo
 	}, nil
 }
 
-func (o *Orchestrator) callQUS(ctx context.Context, req model.SearchRequest) (*model.QUSAnalyzeResponse, []string) {
-	start := time.Now()
-
-	qusResp, err := o.qus.Analyze(ctx, model.QUSAnalyzeRequest{
-		Query:  req.Query,
-		Locale: req.Locale,
-		Market: req.Market,
-	})
-
-	if o.metrics != nil {
-		o.metrics.QUSDuration.Observe(time.Since(start).Seconds())
-	}
-
-	if err != nil {
-		o.logger.WithError(err).Warn("QUS call failed, using degraded mode")
-		if o.metrics != nil {
-			o.metrics.QUSFailures.Inc()
-		}
-		return nil, []string{"QUS unavailable, using raw query"}
-	}
-
-	var warnings []string
-	warnings = append(warnings, qusResp.Warnings...)
-	return qusResp, warnings
-}
 
 func (o *Orchestrator) executeStages(ctx context.Context, plan model.SearchPlan) (*opensearch.SearchResponse, string, error) {
 	var lastResp *opensearch.SearchResponse

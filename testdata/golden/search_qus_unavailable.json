@@ -1,5 +1,5 @@
 {
-  "name": "QUS unavailable degraded mode",
+  "name": "nil QUS degraded mode",
   "input": {
     "query": "chicken burger",
     "locale": "en-GB",
@@ -25,6 +25,6 @@
     "itemCount": 2,
     "hasNextPage": false,
     "hasCursor": true,
-    "hasWarnings": true
+    "hasWarnings": false
   }
 }
