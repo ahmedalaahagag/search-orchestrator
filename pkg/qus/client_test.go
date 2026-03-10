@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hellofresh/search-orchestrator/internal/model"
+	"github.com/ahmedalaahagag/search-orchestrator/pkg/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

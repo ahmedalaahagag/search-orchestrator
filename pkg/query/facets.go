@@ -1,8 +1,8 @@
 package query
 
 import (
-	"github.com/hellofresh/search-orchestrator/internal/model"
-	"github.com/hellofresh/search-orchestrator/pkg/config"
+	"github.com/ahmedalaahagag/search-orchestrator/pkg/model"
+	"github.com/ahmedalaahagag/search-orchestrator/pkg/config"
 )
 
 // BuildFacetAggregations creates OpenSearch aggregations with self-filter exclusion.

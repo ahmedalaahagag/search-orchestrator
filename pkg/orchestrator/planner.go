@@ -1,9 +1,9 @@
 package orchestrator
 
 import (
-	"github.com/hellofresh/search-orchestrator/internal/model"
-	"github.com/hellofresh/search-orchestrator/internal/query"
-	"github.com/hellofresh/search-orchestrator/pkg/config"
+	"github.com/ahmedalaahagag/search-orchestrator/pkg/model"
+	"github.com/ahmedalaahagag/search-orchestrator/pkg/query"
+	"github.com/ahmedalaahagag/search-orchestrator/pkg/config"
 )
 
 type Planner struct {

@@ -6,8 +6,8 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
-	"github.com/hellofresh/search-orchestrator/internal/infra/observability"
-	"github.com/hellofresh/search-orchestrator/internal/orchestrator"
+	"github.com/ahmedalaahagag/search-orchestrator/internal/infra/observability"
+	"github.com/ahmedalaahagag/search-orchestrator/pkg/orchestrator"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sirupsen/logrus"
 )

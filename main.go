@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"github.com/hellofresh/search-orchestrator/cmd"
+	"github.com/ahmedalaahagag/search-orchestrator/cmd"
 )
 
 func main() {

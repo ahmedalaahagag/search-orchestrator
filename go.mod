@@ -1,4 +1,4 @@
-module github.com/hellofresh/search-orchestrator
+module github.com/ahmedalaahagag/search-orchestrator
 
 go 1.26.1
 

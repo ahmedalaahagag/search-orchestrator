@@ -3,7 +3,7 @@ package api
 import (
 	"testing"
 
-	"github.com/hellofresh/search-orchestrator/internal/model"
+	"github.com/ahmedalaahagag/search-orchestrator/pkg/model"
 	"github.com/stretchr/testify/assert"
 )
 

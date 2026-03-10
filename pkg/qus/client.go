@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/hellofresh/search-orchestrator/internal/model"
+	"github.com/ahmedalaahagag/search-orchestrator/pkg/model"
 )
 
 type QUSClient interface {

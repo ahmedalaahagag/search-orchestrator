@@ -7,9 +7,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/hellofresh/search-orchestrator/internal/infra/observability"
-	"github.com/hellofresh/search-orchestrator/internal/model"
-	"github.com/hellofresh/search-orchestrator/internal/orchestrator"
+	"github.com/ahmedalaahagag/search-orchestrator/internal/infra/observability"
+	"github.com/ahmedalaahagag/search-orchestrator/pkg/model"
+	"github.com/ahmedalaahagag/search-orchestrator/pkg/orchestrator"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

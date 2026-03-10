@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/hellofresh/search-orchestrator/internal/model"
-	"github.com/hellofresh/search-orchestrator/pkg/config"
+	"github.com/ahmedalaahagag/search-orchestrator/pkg/model"
+	"github.com/ahmedalaahagag/search-orchestrator/pkg/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

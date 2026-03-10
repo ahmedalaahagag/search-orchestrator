@@ -1,6 +1,6 @@
 package model
 
-import "github.com/hellofresh/search-orchestrator/pkg/config"
+import "github.com/ahmedalaahagag/search-orchestrator/pkg/config"
 
 type SearchPlan struct {
 	NormalizedQuery string

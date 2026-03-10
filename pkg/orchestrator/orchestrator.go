@@ -6,12 +6,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hellofresh/search-orchestrator/internal/infra/observability"
-	"github.com/hellofresh/search-orchestrator/internal/infra/opensearch"
-	"github.com/hellofresh/search-orchestrator/internal/infra/qus"
-	"github.com/hellofresh/search-orchestrator/internal/model"
-	"github.com/hellofresh/search-orchestrator/internal/query"
-	"github.com/hellofresh/search-orchestrator/pkg/config"
+	"github.com/ahmedalaahagag/search-orchestrator/internal/infra/observability"
+	"github.com/ahmedalaahagag/search-orchestrator/pkg/opensearch"
+	"github.com/ahmedalaahagag/search-orchestrator/pkg/qus"
+	"github.com/ahmedalaahagag/search-orchestrator/pkg/model"
+	"github.com/ahmedalaahagag/search-orchestrator/pkg/query"
+	"github.com/ahmedalaahagag/search-orchestrator/pkg/config"
 	"github.com/sirupsen/logrus"
 )
 

@@ -1,6 +1,6 @@
 package api
 
-import "github.com/hellofresh/search-orchestrator/internal/model"
+import "github.com/ahmedalaahagag/search-orchestrator/pkg/model"
 
 type ValidationError struct {
 	Field   string `json:"field"`

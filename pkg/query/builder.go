@@ -3,8 +3,8 @@ package query
 import (
 	"math"
 
-	"github.com/hellofresh/search-orchestrator/internal/model"
-	"github.com/hellofresh/search-orchestrator/pkg/config"
+	"github.com/ahmedalaahagag/search-orchestrator/pkg/model"
+	"github.com/ahmedalaahagag/search-orchestrator/pkg/config"
 )
 
 // Query is the OpenSearch DSL represented as nested maps.

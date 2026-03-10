@@ -10,12 +10,12 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/hellofresh/search-orchestrator/internal/api"
-	"github.com/hellofresh/search-orchestrator/internal/infra/observability"
-	"github.com/hellofresh/search-orchestrator/internal/infra/opensearch"
-	"github.com/hellofresh/search-orchestrator/internal/infra/qus"
-	"github.com/hellofresh/search-orchestrator/internal/orchestrator"
-	"github.com/hellofresh/search-orchestrator/pkg/config"
+	"github.com/ahmedalaahagag/search-orchestrator/internal/api"
+	"github.com/ahmedalaahagag/search-orchestrator/internal/infra/observability"
+	"github.com/ahmedalaahagag/search-orchestrator/pkg/opensearch"
+	"github.com/ahmedalaahagag/search-orchestrator/pkg/qus"
+	"github.com/ahmedalaahagag/search-orchestrator/pkg/orchestrator"
+	"github.com/ahmedalaahagag/search-orchestrator/pkg/config"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
