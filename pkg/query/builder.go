@@ -162,15 +162,36 @@ func buildFilterClause(f model.AppliedFilter) Query {
 		return Query{"term": Query{f.Field: f.Value}}
 	case "in":
 		return Query{"terms": Query{f.Field: f.Value}}
-	case "gt":
-		return Query{"range": Query{f.Field: Query{"gt": f.Value}}}
-	case "gte":
-		return Query{"range": Query{f.Field: Query{"gte": f.Value}}}
-	case "lt":
-		return Query{"range": Query{f.Field: Query{"lt": f.Value}}}
-	case "lte":
-		return Query{"range": Query{f.Field: Query{"lte": f.Value}}}
+	case "gt", "gte", "lt", "lte":
+		return buildRangeFilter(f)
 	default:
 		return Query{"term": Query{f.Field: f.Value}}
+	}
+}
+
+// buildRangeFilter builds a script-based numeric range filter.
+// Index fields may be stored as keyword strings (e.g. price "249"),
+// so we parse them to double in a painless script for correct comparison.
+func buildRangeFilter(f model.AppliedFilter) Query {
+	var op string
+	switch f.Operator {
+	case "gt":
+		op = ">"
+	case "gte":
+		op = ">="
+	case "lt":
+		op = "<"
+	case "lte":
+		op = "<="
+	}
+
+	return Query{
+		"script": Query{
+			"script": Query{
+				"source": "doc['" + f.Field + "'].size() > 0 && Double.parseDouble(doc['" + f.Field + "'].value) " + op + " params.val",
+				"params": Query{"val": f.Value},
+				"lang":   "painless",
+			},
+		},
 	}
 }

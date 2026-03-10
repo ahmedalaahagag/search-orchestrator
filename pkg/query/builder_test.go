@@ -213,10 +213,10 @@ func TestBuildFilterClause_Operators(t *testing.T) {
 	}{
 		{"eq", model.AppliedFilter{Field: "status", Operator: "eq", Value: "active"}, "term"},
 		{"in", model.AppliedFilter{Field: "tags", Operator: "in", Value: []string{"a", "b"}}, "terms"},
-		{"gt", model.AppliedFilter{Field: "price", Operator: "gt", Value: 10}, "range"},
-		{"gte", model.AppliedFilter{Field: "price", Operator: "gte", Value: 10}, "range"},
-		{"lt", model.AppliedFilter{Field: "price", Operator: "lt", Value: 20}, "range"},
-		{"lte", model.AppliedFilter{Field: "price", Operator: "lte", Value: 20}, "range"},
+		{"gt", model.AppliedFilter{Field: "price", Operator: "gt", Value: 10}, "script"},
+		{"gte", model.AppliedFilter{Field: "price", Operator: "gte", Value: 10}, "script"},
+		{"lt", model.AppliedFilter{Field: "price", Operator: "lt", Value: 20}, "script"},
+		{"lte", model.AppliedFilter{Field: "price", Operator: "lte", Value: 20}, "script"},
 	}
 
 	for _, tt := range tests {
