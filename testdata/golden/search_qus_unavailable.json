@@ -1,0 +1,30 @@
+{
+  "name": "QUS unavailable degraded mode",
+  "input": {
+    "query": "chicken burger",
+    "locale": "en-GB",
+    "market": "uk",
+    "sort": "relevance",
+    "page": { "size": 24 }
+  },
+  "qus": {
+    "available": false
+  },
+  "os": [
+    {
+      "totalHits": 15,
+      "hits": [
+        { "id": "60", "title": "Chicken Burger Classic", "score": 8.0 },
+        { "id": "61", "title": "Chicken Burger Spicy", "score": 7.2 }
+      ]
+    }
+  ],
+  "expected": {
+    "stage": "exact",
+    "totalHits": 15,
+    "itemCount": 2,
+    "hasNextPage": false,
+    "hasCursor": true,
+    "hasWarnings": true
+  }
+}

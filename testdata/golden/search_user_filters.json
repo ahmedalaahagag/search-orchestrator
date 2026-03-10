@@ -1,0 +1,43 @@
+{
+  "name": "explicit user filters applied",
+  "input": {
+    "query": "chicken",
+    "locale": "en-GB",
+    "market": "uk",
+    "sort": "relevance",
+    "page": { "size": 24 },
+    "filters": [
+      { "field": "category", "operator": "eq", "value": "burgers" }
+    ]
+  },
+  "qus": {
+    "available": true,
+    "response": {
+      "originalQuery": "chicken",
+      "normalizedQuery": "chicken",
+      "tokens": [
+        { "value": "chicken", "normalized": "chicken", "position": 0 }
+      ],
+      "concepts": [],
+      "filters": [],
+      "warnings": []
+    }
+  },
+  "os": [
+    {
+      "totalHits": 18,
+      "hits": [
+        { "id": "20", "title": "Chicken Classic Burger", "score": 9.5 },
+        { "id": "21", "title": "Chicken Spicy Burger", "score": 8.2 }
+      ]
+    }
+  ],
+  "expected": {
+    "stage": "exact",
+    "totalHits": 18,
+    "itemCount": 2,
+    "hasNextPage": false,
+    "hasCursor": true,
+    "hasWarnings": false
+  }
+}

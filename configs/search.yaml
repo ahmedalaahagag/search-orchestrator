@@ -1,0 +1,46 @@
+index: products
+
+stages:
+  - name: exact
+    minimum_hits: 12
+    query_mode: exact
+    max_term_count: 12
+    fields:
+      - { name: title, boost: 5.0 }
+      - { name: brand, boost: 3.0 }
+      - { name: category, boost: 4.0 }
+      - { name: description, boost: 1.0 }
+
+  - name: fallback_partial
+    minimum_hits: 1
+    query_mode: partial
+    omit_percentage: 34
+    max_term_count: 12
+    fields:
+      - { name: title, boost: 5.0 }
+      - { name: brand, boost: 3.0 }
+      - { name: category, boost: 4.0 }
+      - { name: description, boost: 2.0 }
+      - { name: tags, boost: 1.5 }
+
+default_filters:
+  - { field: hidden, operator: eq, value: false }
+  - { field: availability, operator: in, value: ["in_stock"] }
+
+sorts:
+  relevance:
+    - { field: _score, direction: desc }
+    - { field: id.keyword, direction: asc }
+  price_asc:
+    - { field: price, direction: asc }
+    - { field: id.keyword, direction: asc }
+  price_desc:
+    - { field: price, direction: desc }
+    - { field: id.keyword, direction: asc }
+  newest:
+    - { field: created_at, direction: desc }
+    - { field: id.keyword, direction: asc }
+
+facets:
+  - { field: category, type: terms, size: 20, exclude_self: true }
+  - { field: brand, type: terms, size: 20, exclude_self: true }

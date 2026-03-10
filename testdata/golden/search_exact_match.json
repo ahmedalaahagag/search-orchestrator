@@ -1,0 +1,42 @@
+{
+  "name": "exact match sufficient",
+  "input": {
+    "query": "chicken burger",
+    "locale": "en-GB",
+    "market": "uk",
+    "sort": "relevance",
+    "page": { "size": 24 }
+  },
+  "qus": {
+    "available": true,
+    "response": {
+      "originalQuery": "chicken burger",
+      "normalizedQuery": "chicken burger",
+      "tokens": [
+        { "value": "chicken", "normalized": "chicken", "position": 0 },
+        { "value": "burger", "normalized": "burger", "position": 1 }
+      ],
+      "concepts": [],
+      "filters": [],
+      "warnings": []
+    }
+  },
+  "os": [
+    {
+      "totalHits": 20,
+      "hits": [
+        { "id": "1", "title": "Chicken Burger Deluxe", "score": 12.5 },
+        { "id": "2", "title": "Spicy Chicken Burger", "score": 11.3 },
+        { "id": "3", "title": "Classic Chicken Burger", "score": 10.1 }
+      ]
+    }
+  ],
+  "expected": {
+    "stage": "exact",
+    "totalHits": 20,
+    "itemCount": 3,
+    "hasNextPage": false,
+    "hasCursor": true,
+    "hasWarnings": false
+  }
+}

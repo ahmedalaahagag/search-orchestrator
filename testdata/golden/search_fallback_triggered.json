@@ -1,0 +1,49 @@
+{
+  "name": "fallback triggered when exact below threshold",
+  "input": {
+    "query": "organic quinoa salad",
+    "locale": "en-GB",
+    "market": "uk",
+    "sort": "relevance",
+    "page": { "size": 24 }
+  },
+  "qus": {
+    "available": true,
+    "response": {
+      "originalQuery": "organic quinoa salad",
+      "normalizedQuery": "organic quinoa salad",
+      "tokens": [
+        { "value": "organic", "normalized": "organic", "position": 0 },
+        { "value": "quinoa", "normalized": "quinoa", "position": 1 },
+        { "value": "salad", "normalized": "salad", "position": 2 }
+      ],
+      "concepts": [],
+      "filters": [],
+      "warnings": []
+    }
+  },
+  "os": [
+    {
+      "totalHits": 3,
+      "hits": [
+        { "id": "10", "title": "Quinoa Salad", "score": 8.0 }
+      ]
+    },
+    {
+      "totalHits": 15,
+      "hits": [
+        { "id": "10", "title": "Quinoa Salad", "score": 8.0 },
+        { "id": "11", "title": "Green Salad Bowl", "score": 5.5 },
+        { "id": "12", "title": "Organic Bowl", "score": 4.2 }
+      ]
+    }
+  ],
+  "expected": {
+    "stage": "fallback_partial",
+    "totalHits": 15,
+    "itemCount": 3,
+    "hasNextPage": false,
+    "hasCursor": true,
+    "hasWarnings": false
+  }
+}

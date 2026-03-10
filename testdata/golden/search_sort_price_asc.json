@@ -1,0 +1,40 @@
+{
+  "name": "sort by price ascending",
+  "input": {
+    "query": "chicken",
+    "locale": "en-GB",
+    "market": "uk",
+    "sort": "price_asc",
+    "page": { "size": 24 }
+  },
+  "qus": {
+    "available": true,
+    "response": {
+      "originalQuery": "chicken",
+      "normalizedQuery": "chicken",
+      "tokens": [
+        { "value": "chicken", "normalized": "chicken", "position": 0 }
+      ],
+      "concepts": [],
+      "filters": [],
+      "warnings": []
+    }
+  },
+  "os": [
+    {
+      "totalHits": 30,
+      "hits": [
+        { "id": "40", "title": "Chicken Value Pack", "score": 3.99 },
+        { "id": "41", "title": "Chicken Wings", "score": 5.49 }
+      ]
+    }
+  ],
+  "expected": {
+    "stage": "exact",
+    "totalHits": 30,
+    "itemCount": 2,
+    "hasNextPage": false,
+    "hasCursor": true,
+    "hasWarnings": false
+  }
+}

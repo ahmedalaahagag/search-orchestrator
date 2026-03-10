@@ -1,0 +1,40 @@
+{
+  "name": "cursor pagination second page",
+  "input": {
+    "query": "chicken",
+    "locale": "en-GB",
+    "market": "uk",
+    "sort": "relevance",
+    "page": { "size": 2, "cursor": "WzUuMCwiQiJd" }
+  },
+  "qus": {
+    "available": true,
+    "response": {
+      "originalQuery": "chicken",
+      "normalizedQuery": "chicken",
+      "tokens": [
+        { "value": "chicken", "normalized": "chicken", "position": 0 }
+      ],
+      "concepts": [],
+      "filters": [],
+      "warnings": []
+    }
+  },
+  "os": [
+    {
+      "totalHits": 50,
+      "hits": [
+        { "id": "C", "title": "Chicken Item C", "score": 4.5 },
+        { "id": "D", "title": "Chicken Item D", "score": 3.8 }
+      ]
+    }
+  ],
+  "expected": {
+    "stage": "exact",
+    "totalHits": 50,
+    "itemCount": 2,
+    "hasNextPage": true,
+    "hasCursor": true,
+    "hasWarnings": false
+  }
+}

@@ -1,0 +1,19 @@
+# Binaries
+search-orchestrator
+*.exe
+
+# Environment
+.env
+env
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+
+# Test
+coverage.out
