@@ -7,7 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/ahmedalaahagag/search-orchestrator/internal/infra/observability"
+	"github.com/ahmedalaahagag/search-orchestrator/pkg/observability"
 	"github.com/ahmedalaahagag/search-orchestrator/pkg/model"
 	"github.com/ahmedalaahagag/search-orchestrator/pkg/orchestrator"
 	"github.com/sirupsen/logrus"

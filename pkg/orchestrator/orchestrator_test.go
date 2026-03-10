@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/ahmedalaahagag/search-orchestrator/internal/infra/observability"
+	"github.com/ahmedalaahagag/search-orchestrator/pkg/observability"
 	"github.com/ahmedalaahagag/search-orchestrator/pkg/opensearch"
 	"github.com/ahmedalaahagag/search-orchestrator/pkg/model"
 	"github.com/sirupsen/logrus"

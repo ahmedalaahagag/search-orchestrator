@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/ahmedalaahagag/search-orchestrator/internal/api"
-	"github.com/ahmedalaahagag/search-orchestrator/internal/infra/observability"
+	"github.com/ahmedalaahagag/search-orchestrator/pkg/observability"
 	"github.com/ahmedalaahagag/search-orchestrator/pkg/opensearch"
 	"github.com/ahmedalaahagag/search-orchestrator/pkg/qus"
 	"github.com/ahmedalaahagag/search-orchestrator/pkg/orchestrator"
