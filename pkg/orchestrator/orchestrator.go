@@ -46,8 +46,26 @@ func (o *Orchestrator) Search(ctx context.Context, req model.SearchRequest) (*mo
 	// Step 1: Call QUS with graceful fallback.
 	qusResp, warnings := o.callQUS(ctx, req)
 
+	if qusResp != nil {
+		o.logger.WithFields(logrus.Fields{
+			"normalized_query": qusResp.NormalizedQuery,
+			"tokens":           len(qusResp.Tokens),
+			"concepts":         len(qusResp.Concepts),
+			"filters":          len(qusResp.Filters),
+			"has_sort":         qusResp.Sort != nil,
+		}).Info("QUS analysis result")
+	}
+
 	// Step 2: Build search plan.
 	plan := o.planner.BuildPlan(req, qusResp)
+
+	o.logger.WithFields(logrus.Fields{
+		"tokens":          plan.Tokens,
+		"default_filters": len(plan.DefaultFilters),
+		"user_filters":    len(plan.UserFilters),
+		"stages":          len(plan.Stages),
+		"market":          plan.Market,
+	}).Info("search plan built")
 
 	// Step 3: Execute stages with threshold fallback.
 	osResp, stageName, err := o.executeStages(ctx, plan)
@@ -126,6 +144,13 @@ func (o *Orchestrator) executeStages(ctx context.Context, plan model.SearchPlan)
 		}
 
 		index := resolveIndex(o.cfg.Index, plan.Market)
+
+		o.logger.WithFields(logrus.Fields{
+			"stage": stage.Name,
+			"index": index,
+			"query": string(raw),
+		}).Debug("executing OpenSearch query")
+
 		resp, err := o.os.Search(ctx, index, raw)
 
 		if o.metrics != nil {
@@ -140,15 +165,15 @@ func (o *Orchestrator) executeStages(ctx context.Context, plan model.SearchPlan)
 		lastResp = resp
 		lastStage = stage.Name
 
-		if resp.Hits.Total.Value >= stage.MinimumHits {
-			return resp, stage.Name, nil
-		}
-
 		o.logger.WithFields(logrus.Fields{
 			"stage":    stage.Name,
 			"hits":     resp.Hits.Total.Value,
 			"required": stage.MinimumHits,
-		}).Debug("stage below threshold, trying next")
+		}).Info("stage result")
+
+		if resp.Hits.Total.Value >= stage.MinimumHits {
+			return resp, stage.Name, nil
+		}
 	}
 
 	if lastResp == nil {
