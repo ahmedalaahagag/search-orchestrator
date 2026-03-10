@@ -8,13 +8,17 @@ type SearchResponse struct {
 }
 
 type SearchItem struct {
-	ID           string  `json:"id"`
-	Title        string  `json:"title"`
-	Score        float64 `json:"score"`
-	Price        float64 `json:"price,omitempty"`
-	Availability string  `json:"availability,omitempty"`
-	Brand        string  `json:"brand,omitempty"`
-	Category     string  `json:"category,omitempty"`
+	ID          string   `json:"id"`
+	Title       string   `json:"title"`
+	Score       float64  `json:"score"`
+	Description string   `json:"description,omitempty"`
+	Headline    string   `json:"headline,omitempty"`
+	Slug        string   `json:"slug,omitempty"`
+	ImageURL    string   `json:"imageUrl,omitempty"`
+	Categories  []string `json:"categories,omitempty"`
+	Tags        []string `json:"tags,omitempty"`
+	Allergens   []string `json:"allergens,omitempty"`
+	Ingredients []string `json:"ingredients,omitempty"`
 }
 
 type FacetResult struct {

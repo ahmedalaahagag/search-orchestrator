@@ -8,10 +8,8 @@ type ValidationError struct {
 }
 
 var validSorts = map[string]bool{
-	"relevance":  true,
-	"price_asc":  true,
-	"price_desc": true,
-	"newest":     true,
+	"relevance": true,
+	"newest":    true,
 }
 
 func validateRequest(req model.SearchRequest) []ValidationError {
@@ -34,7 +32,7 @@ func validateRequest(req model.SearchRequest) []ValidationError {
 	}
 
 	if req.Sort != "" && !validSorts[req.Sort] {
-		errs = append(errs, ValidationError{Field: "sort", Message: "sort must be one of: relevance, price_asc, price_desc, newest"})
+		errs = append(errs, ValidationError{Field: "sort", Message: "sort must be one of: relevance, newest"})
 	}
 
 	return errs

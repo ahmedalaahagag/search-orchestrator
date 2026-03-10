@@ -7,7 +7,7 @@
     "sort": "relevance",
     "page": { "size": 24 },
     "filters": [
-      { "field": "category", "operator": "eq", "value": "burgers" }
+      { "field": "categories", "operator": "eq", "value": "burgers" }
     ]
   },
   "qus": {
@@ -25,7 +25,7 @@
   },
   "os": [
     {
-      "totalHits": 18,
+      "totalHits": 24,
       "hits": [
         { "id": "20", "title": "Chicken Classic Burger", "score": 9.5 },
         { "id": "21", "title": "Chicken Spicy Burger", "score": 8.2 }
@@ -34,7 +34,7 @@
   ],
   "expected": {
     "stage": "exact",
-    "totalHits": 18,
+    "totalHits": 24,
     "itemCount": 2,
     "hasNextPage": false,
     "hasCursor": true,

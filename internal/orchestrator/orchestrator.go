@@ -3,6 +3,7 @@ package orchestrator
 import (
 	"context"
 	"encoding/json"
+	"strings"
 	"time"
 
 	"github.com/hellofresh/search-orchestrator/internal/infra/observability"
@@ -124,7 +125,8 @@ func (o *Orchestrator) executeStages(ctx context.Context, plan model.SearchPlan)
 			return nil, "", err
 		}
 
-		resp, err := o.os.Search(ctx, o.cfg.Index, raw)
+		index := resolveIndex(o.cfg.Index, plan.Market)
+		resp, err := o.os.Search(ctx, index, raw)
 
 		if o.metrics != nil {
 			o.metrics.StageDuration.WithLabelValues(stage.Name).Observe(time.Since(start).Seconds())
@@ -156,13 +158,23 @@ func (o *Orchestrator) executeStages(ctx context.Context, plan model.SearchPlan)
 	return lastResp, lastStage, nil
 }
 
+func resolveIndex(template, market string) string {
+	return strings.ReplaceAll(template, "{market}", strings.ToLower(market))
+}
+
 type sourceDoc struct {
-	ID           string  `json:"id"`
-	Title        string  `json:"title"`
-	Price        float64 `json:"price,omitempty"`
-	Availability string  `json:"availability,omitempty"`
-	Brand        string  `json:"brand,omitempty"`
-	Category     string  `json:"category,omitempty"`
+	ID          string   `json:"id"`
+	Title       string   `json:"title"`
+	Description string   `json:"description,omitempty"`
+	Headline    string   `json:"headline,omitempty"`
+	Slug        string   `json:"slug,omitempty"`
+	ImageURL    string   `json:"image_url,omitempty"`
+	Categories  []string `json:"categories,omitempty"`
+	Tags        []string `json:"tags,omitempty"`
+	Allergens   []string `json:"allergens,omitempty"`
+	Ingredients []string `json:"ingredients,omitempty"`
+	SoldOut     bool     `json:"sold_out"`
+	Active      bool     `json:"active"`
 }
 
 func mapHits(resp *opensearch.SearchResponse) []model.SearchItem {
@@ -179,13 +191,17 @@ func mapHits(resp *opensearch.SearchResponse) []model.SearchItem {
 		}
 
 		items = append(items, model.SearchItem{
-			ID:           id,
-			Title:        doc.Title,
-			Score:        hit.Score,
-			Price:        doc.Price,
-			Availability: doc.Availability,
-			Brand:        doc.Brand,
-			Category:     doc.Category,
+			ID:          id,
+			Title:       doc.Title,
+			Score:       hit.Score,
+			Description: doc.Description,
+			Headline:    doc.Headline,
+			Slug:        doc.Slug,
+			ImageURL:    doc.ImageURL,
+			Categories:  doc.Categories,
+			Tags:        doc.Tags,
+			Allergens:   doc.Allergens,
+			Ingredients: doc.Ingredients,
 		})
 	}
 	return items

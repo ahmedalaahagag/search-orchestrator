@@ -23,7 +23,7 @@
   },
   "os": [
     {
-      "totalHits": 20,
+      "totalHits": 24,
       "hits": [
         { "id": "1", "title": "Chicken Burger Deluxe", "score": 12.5 },
         { "id": "2", "title": "Spicy Chicken Burger", "score": 11.3 },
@@ -33,7 +33,7 @@
   ],
   "expected": {
     "stage": "exact",
-    "totalHits": 20,
+    "totalHits": 24,
     "itemCount": 3,
     "hasNextPage": false,
     "hasCursor": true,

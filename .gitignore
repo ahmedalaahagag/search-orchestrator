@@ -15,5 +15,8 @@ env
 # OS
 .DS_Store
 
+# Seed data
+scripts/seed_data_*.ndjson.gz
+
 # Test
 coverage.out

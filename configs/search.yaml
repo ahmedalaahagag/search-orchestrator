@@ -1,15 +1,28 @@
-index: products
+index: hellofresh_{market}_productsonline
 
 stages:
   - name: exact
-    minimum_hits: 12
+    minimum_hits: 24
     query_mode: exact
     max_term_count: 12
     fields:
-      - { name: title, boost: 5.0 }
-      - { name: brand, boost: 3.0 }
-      - { name: category, boost: 4.0 }
-      - { name: description, boost: 1.0 }
+      - { name: title.concept, boost: 150 }
+      - { name: title.shingle, boost: 120 }
+      - { name: title.text, boost: 100 }
+      - { name: categories.concept, boost: 140 }
+      - { name: categories.shingle, boost: 110 }
+      - { name: categories.text, boost: 90 }
+      - { name: ingredients.concept, boost: 130 }
+      - { name: ingredients.shingle, boost: 100 }
+      - { name: ingredients.text, boost: 80 }
+      - { name: tags.concept, boost: 120 }
+      - { name: tags.shingle, boost: 90 }
+      - { name: tags.text, boost: 70 }
+      - { name: recipe_cuisine.concept, boost: 125 }
+      - { name: recipe_cuisine.text, boost: 80 }
+      - { name: headline.concept, boost: 90 }
+      - { name: headline.shingle, boost: 70 }
+      - { name: headline.text, boost: 60 }
 
   - name: fallback_partial
     minimum_hits: 1
@@ -17,30 +30,40 @@ stages:
     omit_percentage: 34
     max_term_count: 12
     fields:
-      - { name: title, boost: 5.0 }
-      - { name: brand, boost: 3.0 }
-      - { name: category, boost: 4.0 }
-      - { name: description, boost: 2.0 }
-      - { name: tags, boost: 1.5 }
+      - { name: title.concept, boost: 150 }
+      - { name: title.shingle, boost: 120 }
+      - { name: title.text, boost: 100 }
+      - { name: categories.concept, boost: 140 }
+      - { name: categories.shingle, boost: 110 }
+      - { name: categories.text, boost: 90 }
+      - { name: ingredients.concept, boost: 130 }
+      - { name: ingredients.shingle, boost: 100 }
+      - { name: ingredients.text, boost: 80 }
+      - { name: tags.concept, boost: 120 }
+      - { name: tags.shingle, boost: 90 }
+      - { name: tags.text, boost: 70 }
+      - { name: recipe_cuisine.concept, boost: 125 }
+      - { name: recipe_cuisine.text, boost: 80 }
+      - { name: headline.concept, boost: 90 }
+      - { name: headline.shingle, boost: 70 }
+      - { name: headline.text, boost: 60 }
+      - { name: description.shingle, boost: 50 }
+      - { name: description.text, boost: 20 }
 
 default_filters:
-  - { field: hidden, operator: eq, value: false }
-  - { field: availability, operator: in, value: ["in_stock"] }
+  - { field: is_addon, operator: eq, value: false }
+  - { field: is_hidden, operator: eq, value: false }
+  - { field: hide_on_sold_out, operator: eq, value: false }
 
 sorts:
   relevance:
     - { field: _score, direction: desc }
-    - { field: id.keyword, direction: asc }
-  price_asc:
-    - { field: price, direction: asc }
-    - { field: id.keyword, direction: asc }
-  price_desc:
-    - { field: price, direction: desc }
-    - { field: id.keyword, direction: asc }
+    - { field: id, direction: asc }
   newest:
-    - { field: created_at, direction: desc }
-    - { field: id.keyword, direction: asc }
+    - { field: updated_at, direction: desc }
+    - { field: id, direction: asc }
 
 facets:
-  - { field: category, type: terms, size: 20, exclude_self: true }
-  - { field: brand, type: terms, size: 20, exclude_self: true }
+  - { field: categories, type: terms, size: 20, exclude_self: true }
+  - { field: tags, type: terms, size: 20, exclude_self: true }
+  - { field: allergens, type: terms, size: 20, exclude_self: true }

@@ -5,6 +5,7 @@ import "github.com/hellofresh/search-orchestrator/pkg/config"
 type SearchPlan struct {
 	NormalizedQuery string
 	Tokens          []string
+	Market          string
 	Stages          []SearchStage
 	DefaultFilters  []AppliedFilter
 	UserFilters     []AppliedFilter

@@ -62,14 +62,10 @@ func TestValidateRequest(t *testing.T) {
 			fields:   []string{"sort"},
 		},
 		{
-			name:     "valid sort price_asc",
+			name:     "invalid sort price_asc",
 			req:      model.SearchRequest{Query: "chicken", Locale: "en-GB", Market: "uk", Sort: "price_asc"},
-			wantErrs: 0,
-		},
-		{
-			name:     "valid sort price_desc",
-			req:      model.SearchRequest{Query: "chicken", Locale: "en-GB", Market: "uk", Sort: "price_desc"},
-			wantErrs: 0,
+			wantErrs: 1,
+			fields:   []string{"sort"},
 		},
 		{
 			name:     "valid sort newest",

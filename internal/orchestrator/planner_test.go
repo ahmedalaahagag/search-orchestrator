@@ -10,15 +10,17 @@ import (
 
 func testSearchConfig() config.SearchConfig {
 	return config.SearchConfig{
-		Index: "products",
+		Index: "hellofresh_{market}_productsonline",
 		Stages: []config.StageConfig{
 			{
 				Name:        "exact",
-				MinimumHits: 12,
+				MinimumHits: 24,
 				QueryMode:   "exact",
 				Fields: []config.FieldConfig{
-					{Name: "title", Boost: 5.0},
-					{Name: "brand", Boost: 3.0},
+					{Name: "title.concept", Boost: 150},
+					{Name: "title.shingle", Boost: 120},
+					{Name: "title.text", Boost: 100},
+					{Name: "categories.concept", Boost: 140},
 				},
 			},
 			{
@@ -27,22 +29,23 @@ func testSearchConfig() config.SearchConfig {
 				QueryMode:      "partial",
 				OmitPercentage: 34,
 				Fields: []config.FieldConfig{
-					{Name: "title", Boost: 5.0},
-					{Name: "description", Boost: 2.0},
+					{Name: "title.concept", Boost: 150},
+					{Name: "title.text", Boost: 100},
+					{Name: "description.text", Boost: 20},
 				},
 			},
 		},
 		DefaultFilters: []config.FilterConfig{
-			{Field: "hidden", Operator: "eq", Value: false},
+			{Field: "is_addon", Operator: "eq", Value: false},
+			{Field: "is_hidden", Operator: "eq", Value: false},
+			{Field: "hide_on_sold_out", Operator: "eq", Value: false},
 		},
 		Sorts: map[string][]config.Sort{
-			"relevance":  {{Field: "_score", Direction: "desc"}, {Field: "id.keyword", Direction: "asc"}},
-			"price_asc":  {{Field: "price", Direction: "asc"}, {Field: "id.keyword", Direction: "asc"}},
-			"price_desc": {{Field: "price", Direction: "desc"}, {Field: "id.keyword", Direction: "asc"}},
-			"newest":     {{Field: "created_at", Direction: "desc"}, {Field: "id.keyword", Direction: "asc"}},
+			"relevance": {{Field: "_score", Direction: "desc"}, {Field: "id", Direction: "asc"}},
+			"newest":    {{Field: "updated_at", Direction: "desc"}, {Field: "id", Direction: "asc"}},
 		},
 		Facets: []config.FacetConfig{
-			{Field: "category", Type: "terms", Size: 20, ExcludeSelf: true},
+			{Field: "categories", Type: "terms", Size: 20, ExcludeSelf: true},
 		},
 	}
 }
@@ -77,7 +80,7 @@ func TestPlanner_BuildPlan_WithQUS(t *testing.T) {
 	assert.Len(t, plan.Stages, 2)
 	assert.Equal(t, "exact", plan.Stages[0].Name)
 	assert.Equal(t, "fallback_partial", plan.Stages[1].Name)
-	assert.Len(t, plan.DefaultFilters, 1)
+	assert.Len(t, plan.DefaultFilters, 3)
 	assert.Len(t, plan.UserFilters, 1)
 	assert.Equal(t, "price", plan.UserFilters[0].Field)
 	assert.Equal(t, 24, plan.PageSize)
@@ -93,7 +96,7 @@ func TestPlanner_BuildPlan_WithoutQUS(t *testing.T) {
 		Locale: "en-GB",
 		Market: "uk",
 		Page:   model.PageRequest{Size: 10},
-		Sort:   "price_asc",
+		Sort:   "newest",
 	}
 
 	plan := planner.BuildPlan(req, nil)
@@ -101,8 +104,8 @@ func TestPlanner_BuildPlan_WithoutQUS(t *testing.T) {
 	assert.Equal(t, "chicken burger", plan.NormalizedQuery)
 	assert.Equal(t, []string{"chicken", "burger"}, plan.Tokens)
 	assert.Len(t, plan.UserFilters, 0)
-	assert.Equal(t, "price", plan.Sort[0].Field)
-	assert.Equal(t, "asc", plan.Sort[0].Direction)
+	assert.Equal(t, "updated_at", plan.Sort[0].Field)
+	assert.Equal(t, "desc", plan.Sort[0].Direction)
 }
 
 func TestPlanner_FilterMerging_RequestPriority(t *testing.T) {
@@ -147,14 +150,14 @@ func TestPlanner_SortResolution_QUSPriority(t *testing.T) {
 	qus := &model.QUSAnalyzeResponse{
 		NormalizedQuery: "chicken",
 		Tokens:          []model.QUSToken{{Value: "chicken", Normalized: "chicken", Position: 0}},
-		Sort:            &model.QUSSortSpec{Field: "price", Direction: "asc"},
+		Sort:            &model.QUSSortSpec{Field: "updated_at", Direction: "desc"},
 	}
 
 	plan := planner.BuildPlan(req, qus)
 
 	// QUS sort should override request sort.
-	assert.Equal(t, "price", plan.Sort[0].Field)
-	assert.Equal(t, "asc", plan.Sort[0].Direction)
+	assert.Equal(t, "updated_at", plan.Sort[0].Field)
+	assert.Equal(t, "desc", plan.Sort[0].Direction)
 }
 
 func TestPlanner_DefaultSort(t *testing.T) {

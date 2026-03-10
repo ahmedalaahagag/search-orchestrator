@@ -74,7 +74,7 @@ func TestOrchestrator_ExactStageSufficient(t *testing.T) {
 
 	os := &mockOSClient{
 		responses: []*opensearch.SearchResponse{
-			{Hits: opensearch.Hits{Total: opensearch.TotalHits{Value: 20}, Hits: makeHits(20)}},
+			{Hits: opensearch.Hits{Total: opensearch.TotalHits{Value: 30}, Hits: makeHits(24)}},
 		},
 	}
 
@@ -89,8 +89,8 @@ func TestOrchestrator_ExactStageSufficient(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Equal(t, "exact", resp.Meta.Stage)
-	assert.Equal(t, 20, resp.Meta.TotalHits)
-	assert.Len(t, resp.Items, 20)
+	assert.Equal(t, 30, resp.Meta.TotalHits)
+	assert.Len(t, resp.Items, 24)
 	assert.Equal(t, 1, os.callCount, "should only call OS once when exact stage is sufficient")
 }
 
@@ -166,7 +166,7 @@ func TestOrchestrator_QUSFailure_DegradedMode(t *testing.T) {
 
 	os := &mockOSClient{
 		responses: []*opensearch.SearchResponse{
-			{Hits: opensearch.Hits{Total: opensearch.TotalHits{Value: 15}, Hits: makeHits(15)}},
+			{Hits: opensearch.Hits{Total: opensearch.TotalHits{Value: 30}, Hits: makeHits(24)}},
 		},
 	}
 
@@ -182,7 +182,7 @@ func TestOrchestrator_QUSFailure_DegradedMode(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "exact", resp.Meta.Stage)
 	assert.Contains(t, resp.Meta.Warnings, "QUS unavailable, using raw query")
-	assert.Equal(t, 15, resp.Meta.TotalHits)
+	assert.Equal(t, 30, resp.Meta.TotalHits)
 }
 
 func TestOrchestrator_Pagination_HasNextPage(t *testing.T) {
@@ -250,7 +250,7 @@ func TestOrchestrator_UserFiltersApplied(t *testing.T) {
 
 	os := &mockOSClient{
 		responses: []*opensearch.SearchResponse{
-			{Hits: opensearch.Hits{Total: opensearch.TotalHits{Value: 15}, Hits: makeHits(15)}},
+			{Hits: opensearch.Hits{Total: opensearch.TotalHits{Value: 30}, Hits: makeHits(24)}},
 		},
 	}
 
@@ -262,10 +262,10 @@ func TestOrchestrator_UserFiltersApplied(t *testing.T) {
 		Page:   model.PageRequest{Size: 24},
 		Sort:   "relevance",
 		Filters: []model.RequestFilter{
-			{Field: "category", Operator: "eq", Value: "burgers"},
+			{Field: "categories", Operator: "eq", Value: "burgers"},
 		},
 	})
 
 	require.NoError(t, err)
-	assert.Equal(t, 15, resp.Meta.TotalHits)
+	assert.Equal(t, 30, resp.Meta.TotalHits)
 }

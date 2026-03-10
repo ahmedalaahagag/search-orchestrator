@@ -1,4 +1,4 @@
-.PHONY: build run test fmt lint clean
+.PHONY: build run test fmt lint clean docker-up docker-down seed
 
 BINARY=bin/search-orchestrator
 
@@ -20,3 +20,12 @@ lint:
 
 clean:
 	rm -rf bin/
+
+docker-up:
+	docker compose up -d
+
+docker-down:
+	docker compose down
+
+seed:
+	./scripts/setup-index.sh

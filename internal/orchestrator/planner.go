@@ -17,6 +17,7 @@ func NewPlanner(cfg config.SearchConfig) *Planner {
 func (p *Planner) BuildPlan(req model.SearchRequest, qus *model.QUSAnalyzeResponse) model.SearchPlan {
 	plan := model.SearchPlan{
 		PageSize: req.Page.Size,
+		Market:   req.Market,
 	}
 
 	// Use QUS normalized query if available, otherwise raw query.
@@ -149,17 +150,13 @@ func (p *Planner) resolveSort(reqSort string, qus *model.QUSAnalyzeResponse) []m
 	// Ultimate fallback.
 	return []model.SortSpec{
 		{Field: "_score", Direction: "desc"},
-		{Field: "id.keyword", Direction: "asc"},
+		{Field: "id", Direction: "asc"},
 	}
 }
 
 func qusSortToKey(s *model.QUSSortSpec) string {
 	switch {
-	case s.Field == "price" && s.Direction == "asc":
-		return "price_asc"
-	case s.Field == "price" && s.Direction == "desc":
-		return "price_desc"
-	case s.Field == "created_at" && s.Direction == "desc":
+	case s.Field == "updated_at" && s.Direction == "desc":
 		return "newest"
 	default:
 		return "relevance"
