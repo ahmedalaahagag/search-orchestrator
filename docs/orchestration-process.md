@@ -230,6 +230,65 @@ Wraps the text query with all supporting clauses:
 
 ### Facet aggregations
 
+```mermaid
+flowchart TD
+    subgraph Inputs
+        FCFG["search.yaml facets<br/><i>categories, tags, allergens</i>"]
+        UF["User filters<br/><i>e.g. categories=meals, tags=quick</i>"]
+    end
+
+    FCFG --> LOOP[For each facet config]
+    UF --> LOOP
+
+    LOOP --> CHECK{exclude_self<br/>AND user filters<br/>on this field?}
+
+    CHECK -->|yes| EXCLUDE["Wrap in filter agg<br/>Apply all user filters<br/><b>EXCEPT</b> this facet's field"]
+    CHECK -->|no| INCLUDE["Wrap in filter agg<br/>Apply all user filters"]
+
+    EXCLUDE --> INNER
+    INCLUDE --> INNER
+
+    INNER["Inner terms agg<br/><code>field.keyword</code>, size: 20"]
+
+    INNER --> OS[(OpenSearch)]
+    OS --> PARSE["parseFacets()<br/>Unwrap filter → extract buckets"]
+    PARSE --> RESULT["FacetResult<br/>{field, buckets[]{key, count}}"]
+
+    style FCFG fill:#fff3e0,stroke:#f5a623
+    style UF fill:#e1f0ff,stroke:#4a90d9
+    style OS fill:#e8f5e9,stroke:#4caf50
+    style RESULT fill:#e1f0ff,stroke:#4a90d9
+```
+
+```mermaid
+flowchart LR
+    subgraph "Example: user selects categories=meals"
+        direction TB
+
+        subgraph "categories agg (exclude_self)"
+            CF1["filter: tags=quick only<br/><i>categories filter excluded</i>"]
+            CF1 --> CA["terms: categories.keyword"]
+            CA --> CR["meals: 47<br/>desserts: 23<br/>sides: 15<br/><i>all values visible</i>"]
+        end
+
+        subgraph "tags agg (exclude_self)"
+            TF1["filter: categories=meals only<br/><i>tags filter excluded</i>"]
+            TF1 --> TA["terms: tags.keyword"]
+            TA --> TR["quick: 31<br/>healthy: 18<br/>premium: 12<br/><i>all values visible</i>"]
+        end
+
+        subgraph "allergens agg (exclude_self)"
+            AF1["filter: categories=meals + tags=quick"]
+            AF1 --> AA["terms: allergens.keyword"]
+            AA --> AR["gluten: 22<br/>dairy: 19<br/>nuts: 8"]
+        end
+    end
+
+    style CR fill:#e8f5e9,stroke:#4caf50
+    style TR fill:#e8f5e9,stroke:#4caf50
+    style AR fill:#e8f5e9,stroke:#4caf50
+```
+
 Each configured facet becomes a `terms` aggregation on `{field}.keyword`.
 
 When `exclude_self: true`, the aggregation is wrapped in a `filter` aggregation that applies all user filters *except* the one for its own field. This means selecting "meals" in the category facet still shows all other category values with their full counts.
