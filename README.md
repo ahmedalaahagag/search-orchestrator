@@ -2,39 +2,27 @@
 
 A Go library for multi-stage search orchestration over OpenSearch with threshold-based fallback, faceted filtering, and cursor-based pagination.
 
-Can be used as an importable library in your own service or run as a standalone HTTP server.
-
-## Installation
+## Install
 
 ```bash
 go get github.com/ahmedalaahagag/search-orchestrator
 ```
 
-## Using as a Library
+## Quick Start
 
-### 1. Create a search config file
+### 1. Define your search config
 
-The library is driven by a `search.yaml` config file that defines how search queries are built and executed.
+Create a `search.yaml` that drives all search behavior — stages, fields, boosts, filters, sorts, and facets.
 
 ```yaml
-# search.yaml
+index: myapp_{market}_products  # {market} is replaced from the request
 
-# Index name pattern. {market} is replaced at runtime from the request.
-index: myapp_{market}_products
-
-# Search stages execute sequentially. The first stage that meets
-# minimum_hits stops execution. If none meet the threshold, the
-# last stage's results are returned.
 stages:
   - name: exact
-    minimum_hits: 24          # Minimum results to accept this stage
-    query_mode: exact         # All tokens must match
-    max_term_count: 12        # Truncate query beyond this many tokens
+    minimum_hits: 24
+    query_mode: exact             # All tokens must match (bool.must)
+    max_term_count: 12
     fields:
-      # Each field uses OpenSearch sub-field analyzers.
-      # .concept = keyword analyzer (exact phrase match)
-      # .shingle = shingle analyzer (phrase proximity)
-      # .text    = stemmed text analyzer (broad match)
       - { name: title.concept, boost: 150 }
       - { name: title.shingle, boost: 120 }
       - { name: title.text, boost: 100 }
@@ -42,33 +30,26 @@ stages:
 
   - name: fallback_partial
     minimum_hits: 1
-    query_mode: partial       # Allows some tokens to not match
-    omit_percentage: 34       # Up to 34% of tokens can be omitted
+    query_mode: partial           # Some tokens can be omitted (bool.should)
+    omit_percentage: 34
     max_term_count: 12
     fields:
       - { name: title.concept, boost: 150 }
       - { name: title.text, boost: 100 }
       - { name: description.text, boost: 20 }
 
-# Filters applied to every query (bool.filter clause).
-# Operators: eq, in, gt, gte, lt, lte
 default_filters:
   - { field: is_hidden, operator: eq, value: false }
   - { field: active, operator: eq, value: true }
 
-# Named sort configurations. Each sort is a list of fields.
-# The tiebreaker (e.g. id) ensures stable pagination.
 sorts:
   relevance:
     - { field: _score, direction: desc }
-    - { field: id, direction: asc }
+    - { field: id, direction: asc }      # Tiebreaker for stable pagination
   newest:
     - { field: updated_at, direction: desc }
     - { field: id, direction: asc }
 
-# Facet aggregations returned with search results.
-# exclude_self: true means clicking a facet value won't collapse
-# other values in the same facet.
 facets:
   - { field: category, type: terms, size: 20, exclude_self: true }
   - { field: brand, type: terms, size: 20, exclude_self: true }
@@ -82,6 +63,7 @@ package main
 import (
     "context"
     "log"
+    "time"
 
     "github.com/ahmedalaahagag/search-orchestrator/pkg/config"
     "github.com/ahmedalaahagag/search-orchestrator/pkg/model"
@@ -94,13 +76,13 @@ import (
 func main() {
     logger := logrus.New()
 
-    // 1. Load search config from YAML.
+    // Load search config.
     searchCfg, err := config.LoadSearchConfig("configs/search.yaml")
     if err != nil {
         log.Fatal(err)
     }
 
-    // 2. Create OpenSearch client.
+    // Create OpenSearch client.
     osClient := opensearch.NewClient(opensearch.ClientConfig{
         URL:      "http://localhost:9200",
         Username: "admin",
@@ -108,12 +90,12 @@ func main() {
         Timeout:  5 * time.Second,
     })
 
-    // 3. Create orchestrator.
+    // Create orchestrator.
     metrics := observability.NewMetrics()
     planner := orchestrator.NewPlanner(searchCfg)
     orch := orchestrator.New(logger, metrics, osClient, planner, searchCfg)
 
-    // 4. Execute a search.
+    // Search.
     resp, err := orch.Search(context.Background(),
         model.SearchRequest{
             Query:  "chicken",
@@ -122,7 +104,7 @@ func main() {
             Page:   model.PageRequest{Size: 24},
             Sort:   "relevance",
         },
-        nil, // optional *model.QUSAnalyzeResponse from your own QUS
+        nil, // no QUS — uses whitespace tokenization
     )
     if err != nil {
         log.Fatal(err)
@@ -132,9 +114,55 @@ func main() {
 }
 ```
 
-### 3. Bring your own QUS (optional)
+### 3. Pagination
 
-The orchestrator accepts an optional `*model.QUSAnalyzeResponse` as the second argument to `Search()`. If you have your own Query Understanding Service, pass its output to influence tokenization, filters, and sort:
+Use the cursor from the response to fetch the next page:
+
+```go
+// First page
+resp, _ := orch.Search(ctx, model.SearchRequest{
+    Query:  "chicken",
+    Locale: "en-US",
+    Market: "us",
+    Page:   model.PageRequest{Size: 24},
+    Sort:   "relevance",
+}, nil)
+
+// Next page
+if resp.Page.HasNextPage {
+    resp, _ = orch.Search(ctx, model.SearchRequest{
+        Query:  "chicken",
+        Locale: "en-US",
+        Market: "us",
+        Page:   model.PageRequest{Size: 24, Cursor: resp.Page.Cursor},
+        Sort:   "relevance",
+    }, nil)
+}
+```
+
+### 4. User filters
+
+Pass runtime filters from the user (e.g. facet selections):
+
+```go
+resp, _ := orch.Search(ctx, model.SearchRequest{
+    Query:  "chicken",
+    Locale: "en-US",
+    Market: "us",
+    Page:   model.PageRequest{Size: 24},
+    Sort:   "relevance",
+    Filters: []model.RequestFilter{
+        {Field: "category", Operator: "eq", Value: "meals"},
+        {Field: "brand", Operator: "in", Value: []string{"classic", "gourmet"}},
+    },
+}, nil)
+```
+
+User filters are applied as `post_filter` so they don't affect facet counts.
+
+### 5. QUS integration (optional)
+
+If you have a Query Understanding Service, pass its output to influence tokenization, filters, and sort:
 
 ```go
 qusResult := &model.QUSAnalyzeResponse{
@@ -151,122 +179,41 @@ qusResult := &model.QUSAnalyzeResponse{
 resp, err := orch.Search(ctx, req, qusResult)
 ```
 
-If `nil` is passed, the orchestrator uses the raw query string with simple whitespace tokenization.
+When `nil` is passed, the orchestrator tokenizes the raw query by whitespace.
+
+## How It Works
+
+Stages execute sequentially. Each builds an OpenSearch query from the tokenized input and configured fields. The first stage that meets its `minimum_hits` threshold wins. If none do, the last stage's results are returned.
+
+```
+Request + QUS → Planner → SearchPlan → Stage 1 (exact) → 3 hits (need 24) → skip
+                                      → Stage 2 (partial) → 47 hits (need 1) → return
+```
+
+**Query strategy per token:** `dis_max` across all configured fields — each field gets an individual `match` query with its boost weight.
+
+**Filter operators:** `eq` (term), `in` (terms), `gt`/`gte`/`lt`/`lte` (range).
 
 ## Packages
 
-| Package | Import Path | Description |
-|---|---|---|
-| **config** | `pkg/config` | Load and parse `search.yaml` configuration |
-| **model** | `pkg/model` | Domain types: `SearchRequest`, `SearchResponse`, `SearchPlan`, QUS types |
-| **orchestrator** | `pkg/orchestrator` | Core search orchestration with multi-stage fallback |
-| **query** | `pkg/query` | OpenSearch DSL builder (queries, filters, facets, pagination) |
-| **opensearch** | `pkg/opensearch` | OpenSearch HTTP client and response types |
-| **observability** | `pkg/observability` | Prometheus metrics and structured logging |
-
-## Search Config Reference
-
-### `index`
-
-Index name pattern. Use `{market}` as a placeholder — it gets replaced with the lowercase `market` value from the search request.
-
-```yaml
-index: myapp_{market}_products
-# Request with market: "us" → searches index "myapp_us_products"
-```
-
-### `stages`
-
-Stages execute sequentially. Each stage builds an OpenSearch query from the tokenized input and configured fields. If a stage returns >= `minimum_hits`, it's accepted and execution stops.
-
-| Field | Type | Description |
-|---|---|---|
-| `name` | string | Stage identifier (returned in response metadata) |
-| `minimum_hits` | int | Minimum results to accept this stage |
-| `query_mode` | string | `exact` (all tokens must match) or `partial` (allows omission) |
-| `omit_percentage` | int | Max % of tokens that can be omitted (partial mode only) |
-| `max_term_count` | int | Truncate query tokens beyond this count |
-| `fields` | list | Fields to search with boost values |
-
-**Query modes:**
-- `exact` — Every token must match at least one field. Built as `bool.must` with `dis_max` per token across all fields.
-- `partial` — Allows up to `omit_percentage`% of tokens to not match. Built as `bool.should` with `minimum_should_match`.
-
-### `fields`
-
-Each field entry is a `name` + `boost` pair. The `name` should reference an OpenSearch field path including the sub-field analyzer:
-
-- `.concept` — keyword/concept analyzer (highest precision)
-- `.shingle` — shingle analyzer (phrase proximity matching)
-- `.text` — stemmed text analyzer (broadest recall)
-
-Higher boost = more weight when that field matches.
-
-### `default_filters`
-
-Filters applied to every query as `bool.filter` clauses. These are hard requirements (not scoring).
-
-| Operator | OpenSearch Query |
+| Package | Description |
 |---|---|
-| `eq` | `term` |
-| `in` | `terms` |
-| `gt`, `gte`, `lt`, `lte` | `range` |
+| `pkg/config` | Load and parse `search.yaml` |
+| `pkg/model` | Domain types: request, response, search plan, QUS types |
+| `pkg/orchestrator` | Core orchestration with multi-stage fallback |
+| `pkg/query` | OpenSearch DSL builder |
+| `pkg/opensearch` | OpenSearch HTTP client |
+| `pkg/observability` | Prometheus metrics |
 
-### `sorts`
+## Standalone Server
 
-Named sort configurations referenced by the `sort` field in search requests. Each sort is a list of `{field, direction}` pairs. Always include a tiebreaker field (e.g. `id`) for stable cursor pagination.
-
-### `facets`
-
-Facet aggregations returned alongside search results.
-
-| Field | Type | Description |
-|---|---|---|
-| `field` | string | Document field to aggregate on |
-| `type` | string | Aggregation type (`terms`) |
-| `size` | int | Max buckets to return (default: 20) |
-| `exclude_self` | bool | Exclude this facet's own filter from its aggregation |
-
-When `exclude_self: true`, clicking a facet value doesn't collapse other values in the same facet — each facet sees all results except its own filter.
-
-## Running as a Standalone Server
-
-The repo also includes a standalone HTTP server for development and testing.
-
-### Prerequisites
-
-- Go 1.26+
-- Docker (for local OpenSearch)
-
-### Quick Start
+The repo includes a standalone HTTP server for development and testing.
 
 ```bash
-# Start OpenSearch
-make docker-up
-
-# Create indexes and seed sample data
-make seed
-
-# Start the server
-make run
+make docker-up   # Start OpenSearch
+make seed        # Create indexes + seed data
+make run         # Start server on :8081
 ```
-
-### Environment Variables
-
-| Variable | Default | Description |
-|---|---|---|
-| `SEARCH_HTTP_PORT` | `8081` | HTTP server port |
-| `SEARCH_OPENSEARCH_URL` | `http://localhost:9200` | OpenSearch endpoint |
-| `SEARCH_OPENSEARCH_USERNAME` | | OpenSearch username |
-| `SEARCH_OPENSEARCH_PASSWORD` | | OpenSearch password |
-| `SEARCH_OPENSEARCH_TIMEOUT` | `5s` | OpenSearch request timeout |
-| `SEARCH_QUS_URL` | `http://localhost:8080` | QUS endpoint |
-| `SEARCH_QUS_TIMEOUT` | `3s` | QUS request timeout |
-| `SEARCH_CONFIG_DIR` | `configs` | Path to search config directory |
-
-### API
-
-#### `POST /v1/search`
 
 ```bash
 curl -X POST http://localhost:8081/v1/search \
@@ -280,24 +227,21 @@ curl -X POST http://localhost:8081/v1/search \
   }'
 ```
 
-**Required fields:** `query`, `locale`, `market`
+### Environment Variables
 
-**Optional fields:**
-- `page.size` (1-100, default: 24)
-- `page.cursor` (opaque cursor from previous response for pagination)
-- `sort` (must match a key in `sorts` config — default: `relevance`)
-- `filters` (array of `{ "field": "...", "operator": "...", "value": ... }`)
-
-#### `GET /healthz`
-
-Returns `{"status": "ok"}`.
-
-#### `GET /metrics`
-
-Prometheus metrics endpoint.
+| Variable | Default | Description |
+|---|---|---|
+| `SEARCH_HTTP_PORT` | `8081` | HTTP server port |
+| `SEARCH_OPENSEARCH_URL` | `http://localhost:9200` | OpenSearch endpoint |
+| `SEARCH_OPENSEARCH_USERNAME` | | OpenSearch username |
+| `SEARCH_OPENSEARCH_PASSWORD` | | OpenSearch password |
+| `SEARCH_OPENSEARCH_TIMEOUT` | `5s` | Request timeout |
+| `SEARCH_CONFIG_DIR` | `configs` | Path to search config directory |
 
 ## Testing
 
 ```bash
+make test
+# or
 go test ./... -v -race
 ```
