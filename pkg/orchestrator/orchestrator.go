@@ -58,6 +58,7 @@ func (o *Orchestrator) Search(ctx context.Context, req model.SearchRequest, qusR
 		"tokens":          plan.Tokens,
 		"default_filters": len(plan.DefaultFilters),
 		"user_filters":    len(plan.UserFilters),
+		"sort":            plan.Sort,
 		"stages":          len(plan.Stages),
 		"market":          plan.Market,
 	}).Info("search plan built")
@@ -116,10 +117,12 @@ func (o *Orchestrator) executeStages(ctx context.Context, plan model.SearchPlan)
 		index := resolveIndex(o.cfg.Index, plan.Market)
 
 		o.logger.WithFields(logrus.Fields{
-			"stage": stage.Name,
-			"index": index,
-			"query": string(raw),
-		}).Debug("executing OpenSearch query")
+			"stage":  stage.Name,
+			"index":  index,
+			"tokens": plan.Tokens,
+			"mode":   stage.QueryMode,
+		}).Info("executing stage")
+		o.logger.WithField("body", string(raw)).Debug("OpenSearch request body")
 
 		resp, err := o.os.Search(ctx, index, raw)
 
