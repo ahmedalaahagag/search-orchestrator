@@ -6,23 +6,93 @@ How a search request flows through the orchestrator, from input to OpenSearch re
 
 ## Overview
 
+```mermaid
+flowchart TD
+    subgraph Inputs
+        REQ[SearchRequest]
+        QUS[QUSAnalyzeResponse<br/><i>optional</i>]
+        CFG[search.yaml]
+    end
+
+    REQ --> PLAN
+    QUS -.-> PLAN
+    CFG --> PLAN
+
+    PLAN[<b>Planner.BuildPlan</b><br/>Tokenize query<br/>Merge filters<br/>Resolve sort<br/>Decode cursor]
+
+    PLAN --> SP[SearchPlan<br/><i>tokens, stages, filters, sort, facets, cursor</i>]
+
+    SP --> EXEC
+
+    subgraph Stage Execution
+        EXEC{Next stage?}
+        EXEC -->|yes| BUILD[<b>BuildStageQuery</b><br/>Per-token dis_max<br/>exact: bool.must<br/>partial: bool.should]
+        BUILD --> FULL[<b>BuildFullRequest</b><br/>+ default filters<br/>+ post_filter<br/>+ facet aggs<br/>+ sort + cursor]
+        FULL --> OS[(OpenSearch)]
+        OS --> CHECK{hits >= threshold?}
+        CHECK -->|no| EXEC
+        CHECK -->|yes| MAP
+    end
+
+    EXEC -->|no more stages| MAP
+
+    MAP[<b>Result Mapping</b><br/>Map hits → items<br/>Parse facet buckets<br/>Encode next cursor]
+
+    MAP --> RESP[SearchResponse<br/><i>items, facets, page, meta</i>]
+
+    style REQ fill:#e1f0ff,stroke:#4a90d9
+    style QUS fill:#e1f0ff,stroke:#4a90d9,stroke-dasharray: 5 5
+    style CFG fill:#fff3e0,stroke:#f5a623
+    style SP fill:#f0f0f0,stroke:#888
+    style OS fill:#e8f5e9,stroke:#4caf50
+    style RESP fill:#e1f0ff,stroke:#4a90d9
 ```
-SearchRequest + QUSAnalyzeResponse (optional)
-        │
-        ▼
-    ┌─────────┐
-    │ Planner │  Builds a SearchPlan from request, QUS output, and YAML config
-    └────┬────┘
-         │
-         ▼
-    ┌──────────────────┐
-    │ Stage Execution  │  Runs stages sequentially until one meets its hit threshold
-    └────┬─────────────┘
-         │
-         ▼
-    ┌──────────────────┐
-    │ Result Mapping   │  Maps OpenSearch hits → SearchResponse (items, facets, cursor)
-    └──────────────────┘
+
+```mermaid
+flowchart LR
+    subgraph Query Structure
+        direction TB
+        TOKEN1[token 1] --> DM1[dis_max<br/>title.concept boost:150<br/>title.shingle boost:120<br/>title.text boost:100<br/>tags.text boost:70]
+        TOKEN2[token 2] --> DM2[dis_max<br/><i>same fields</i>]
+        TOKENN[token N] --> DMN[dis_max<br/><i>same fields</i>]
+    end
+
+    subgraph Exact Mode
+        DM1 --> MUST[bool.must<br/><i>all tokens required</i>]
+        DM2 --> MUST
+        DMN --> MUST
+    end
+
+    subgraph Partial Mode
+        DM1 --> SHOULD[bool.should<br/>minimum_should_match<br/><i>some tokens can be omitted</i>]
+        DM2 --> SHOULD
+        DMN --> SHOULD
+    end
+
+    style TOKEN1 fill:#e1f0ff,stroke:#4a90d9
+    style TOKEN2 fill:#e1f0ff,stroke:#4a90d9
+    style TOKENN fill:#e1f0ff,stroke:#4a90d9
+    style MUST fill:#ffebee,stroke:#ef5350
+    style SHOULD fill:#fff3e0,stroke:#f5a623
+```
+
+```mermaid
+flowchart TD
+    subgraph OpenSearch Request Body
+        Q[query<br/><b>bool.must</b>: stage query<br/><b>bool.filter</b>: default filters<br/><i>is_addon, is_hidden, hide_on_sold_out</i>]
+        PF[post_filter<br/><b>bool.filter</b>: user + QUS filters<br/><i>applied AFTER aggs</i>]
+        AGG[aggs<br/>per-facet terms aggregation<br/><i>wrapped in filter for self-exclusion</i>]
+        SORT[sort + search_after + size]
+    end
+
+    Q --- NOTE1[Default filters narrow<br/>both results AND facet counts]
+    PF --- NOTE2[User filters narrow results<br/>but NOT facet counts]
+
+    style Q fill:#e8f5e9,stroke:#4caf50
+    style PF fill:#fff3e0,stroke:#f5a623
+    style AGG fill:#f3e5f5,stroke:#ab47bc
+    style NOTE1 fill:#fff,stroke:#ccc,stroke-dasharray: 3 3
+    style NOTE2 fill:#fff,stroke:#ccc,stroke-dasharray: 3 3
 ```
 
 ---
