@@ -6,12 +6,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/ahmedalaahagag/search-orchestrator/pkg/config"
 	"github.com/ahmedalaahagag/search-orchestrator/pkg/model"
 	"github.com/ahmedalaahagag/search-orchestrator/pkg/observability"
 	"github.com/ahmedalaahagag/search-orchestrator/pkg/opensearch"
 	"github.com/ahmedalaahagag/search-orchestrator/pkg/query"
-	"github.com/sirupsen/logrus"
 )
 
 type Orchestrator struct {
@@ -95,7 +96,6 @@ func (o *Orchestrator) Search(ctx context.Context, req model.SearchRequest, qusR
 	}, nil
 }
 
-
 func (o *Orchestrator) executeStages(ctx context.Context, plan model.SearchPlan) (*opensearch.SearchResponse, string, error) {
 	var lastResp *opensearch.SearchResponse
 	var lastStage string
@@ -161,18 +161,45 @@ func resolveIndex(template, market string) string {
 }
 
 type sourceDoc struct {
-	ID          string   `json:"id"`
-	Title       string   `json:"title"`
-	Description string   `json:"description,omitempty"`
-	Headline    string   `json:"headline,omitempty"`
-	Slug        string   `json:"slug,omitempty"`
-	ImageURL    string   `json:"image_url,omitempty"`
-	Categories  []string `json:"categories,omitempty"`
-	Tags        []string `json:"tags,omitempty"`
-	Allergens   []string `json:"allergens,omitempty"`
-	Ingredients []string `json:"ingredients,omitempty"`
-	SoldOut     bool     `json:"sold_out"`
-	Active      bool     `json:"active"`
+	ID                 string   `json:"id"`
+	Title              string   `json:"title"`
+	Description        string   `json:"description,omitempty"`
+	Headline           string   `json:"headline,omitempty"`
+	Slug               string   `json:"slug,omitempty"`
+	ImageURL           string   `json:"image_url,omitempty"`
+	Locale             string   `json:"locale,omitempty"`
+	Market             string   `json:"market,omitempty"`
+	Categories         []string `json:"categories,omitempty"`
+	Tags               []string `json:"tags,omitempty"`
+	Allergens          []string `json:"allergens,omitempty"`
+	Ingredients        []string `json:"ingredients,omitempty"`
+	RecipeCuisine      []string `json:"recipe_cuisine,omitempty"`
+	Utensils           []string `json:"utensils,omitempty"`
+	ShoppingSegments   []string `json:"shopping_segments,omitempty"`
+	Active             bool     `json:"active"`
+	SoldOut            bool     `json:"sold_out"`
+	IsAddon            bool     `json:"is_addon"`
+	IsHidden           bool     `json:"is_hidden"`
+	HideOnSoldOut      bool     `json:"hide_on_sold_out"`
+	Week               string   `json:"week,omitempty"`
+	TotalTime          string   `json:"total_time,omitempty"`
+	PreparationTime    string   `json:"preparation_time,omitempty"`
+	DifficultyLevel    string   `json:"difficulty_level,omitempty"`
+	TotalCalories      string   `json:"total_calories,omitempty"`
+	Fat                string   `json:"fat,omitempty"`
+	SaturatedFat       string   `json:"saturated_fat,omitempty"`
+	Carbohydrate       string   `json:"carbohydrate,omitempty"`
+	DietaryFiber       string   `json:"dietary_fiber,omitempty"`
+	Sugar              string   `json:"sugar,omitempty"`
+	Sodium             string   `json:"sodium,omitempty"`
+	PriceType          string   `json:"price_type,omitempty"`
+	Price              string   `json:"price,omitempty"`
+	ParentID           string   `json:"parentId,omitempty"`
+	Index              int      `json:"index,omitempty"`
+	UpdatedAt          string   `json:"updated_at,omitempty"`
+	MenuID             string   `json:"menu,omitempty"`
+	RecipeID           string   `json:"recipe_id,omitempty"`
+	ShoppableProductID string   `json:"shoppable_product_id,omitempty"`
 }
 
 func mapHits(resp *opensearch.SearchResponse) []model.SearchItem {
@@ -189,17 +216,46 @@ func mapHits(resp *opensearch.SearchResponse) []model.SearchItem {
 		}
 
 		items = append(items, model.SearchItem{
-			ID:          id,
-			Title:       doc.Title,
-			Score:       hit.Score,
-			Description: doc.Description,
-			Headline:    doc.Headline,
-			Slug:        doc.Slug,
-			ImageURL:    doc.ImageURL,
-			Categories:  doc.Categories,
-			Tags:        doc.Tags,
-			Allergens:   doc.Allergens,
-			Ingredients: doc.Ingredients,
+			ID:                 id,
+			Title:              doc.Title,
+			Score:              hit.Score,
+			Description:        doc.Description,
+			Headline:           doc.Headline,
+			Slug:               doc.Slug,
+			ImageURL:           doc.ImageURL,
+			Locale:             doc.Locale,
+			Market:             doc.Market,
+			Categories:         doc.Categories,
+			Tags:               doc.Tags,
+			Allergens:          doc.Allergens,
+			Ingredients:        doc.Ingredients,
+			RecipeCuisine:      doc.RecipeCuisine,
+			Utensils:           doc.Utensils,
+			ShoppingSegments:   doc.ShoppingSegments,
+			Active:             doc.Active,
+			SoldOut:            doc.SoldOut,
+			IsAddon:            doc.IsAddon,
+			IsHidden:           doc.IsHidden,
+			HideOnSoldOut:      doc.HideOnSoldOut,
+			Week:               doc.Week,
+			TotalTime:          doc.TotalTime,
+			PreparationTime:    doc.PreparationTime,
+			DifficultyLevel:    doc.DifficultyLevel,
+			TotalCalories:      doc.TotalCalories,
+			Fat:                doc.Fat,
+			SaturatedFat:       doc.SaturatedFat,
+			Carbohydrate:       doc.Carbohydrate,
+			DietaryFiber:       doc.DietaryFiber,
+			Sugar:              doc.Sugar,
+			Sodium:             doc.Sodium,
+			PriceType:          doc.PriceType,
+			Price:              doc.Price,
+			ParentID:           doc.ParentID,
+			Index:              doc.Index,
+			UpdatedAt:          doc.UpdatedAt,
+			MenuID:             doc.MenuID,
+			RecipeID:           doc.RecipeID,
+			ShoppableProductID: doc.ShoppableProductID,
 		})
 	}
 	return items
