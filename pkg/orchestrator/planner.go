@@ -42,7 +42,14 @@ func (p *Planner) BuildPlan(req model.SearchRequest, qus *model.QUSAnalyzeRespon
 	}
 
 	// Merge filters: explicit request > QUS-inferred > defaults.
+	// RequiredFilters (e.g. week, menu_key) go into DefaultFilters so they
+	// restrict hit counts and stage fallback, not just post_filter.
 	plan.DefaultFilters = defaultFilters(p.cfg.DefaultFilters)
+	for _, f := range req.RequiredFilters {
+		plan.DefaultFilters = append(plan.DefaultFilters, model.AppliedFilter{
+			Field: f.Field, Operator: f.Operator, Value: f.Value,
+		})
+	}
 	plan.UserFilters = mergeUserFilters(req.Filters, qus)
 
 	// Resolve sort.
