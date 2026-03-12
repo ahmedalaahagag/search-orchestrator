@@ -186,8 +186,9 @@ func buildRangeFilter(f model.AppliedFilter) Query {
 	}
 
 	// Strip non-numeric suffixes (e.g. "560 kcal" → "560", "1800" → "1800").
-	// Painless split() with a regex pattern, take the first token.
-	source := "doc['" + f.Field + "'].size() > 0 && Double.parseDouble(doc['" + f.Field + "'].value.trim().split(' ')[0]) " + op + " params.val"
+	// Use indexOf/substring since painless doesn't whitelist String.split().
+	field := f.Field
+	source := "if (doc['" + field + "'].size() == 0) return false; def v = doc['" + field + "'].value.trim(); def i = v.indexOf(' '); Double.parseDouble(i > 0 ? v.substring(0, i) : v) " + op + " params.val"
 
 	return Query{
 		"script": Query{
