@@ -185,10 +185,14 @@ func buildRangeFilter(f model.AppliedFilter) Query {
 		op = "<="
 	}
 
+	// Strip non-numeric suffixes (e.g. "560 kcal" → "560", "1800" → "1800")
+	// using replaceAll to remove everything after the last digit.
+	source := "doc['" + f.Field + "'].size() > 0 && Double.parseDouble(doc['" + f.Field + "'].value.replaceAll('[^0-9.].*', '')) " + op + " params.val"
+
 	return Query{
 		"script": Query{
 			"script": Query{
-				"source": "doc['" + f.Field + "'].size() > 0 && Double.parseDouble(doc['" + f.Field + "'].value) " + op + " params.val",
+				"source": source,
 				"params": Query{"val": f.Value},
 				"lang":   "painless",
 			},
