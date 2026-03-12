@@ -107,3 +107,74 @@ This follows the pattern of logging at decision boundaries — not every line, b
 - `scripts/setup-index.sh` that creates indexes with production-equivalent mappings for US, CA, and GB markets
 - Compressed seed data files (`.ndjson.gz`) for each market, gitignored to keep the repo lean
 - `Makefile` targets: `make docker-up`, `make seed`, `make run`
+
+---
+
+## 7. Painless Script Limitations for Range Filters on Keyword Fields with Suffixes
+
+**Problem:** Some keyword fields store values with non-numeric suffixes (e.g. `total_calories: "560 kcal"`). The initial painless script used `Double.parseDouble(doc['field'].value)` which threw a `NumberFormatException` on these values. Two fix attempts failed:
+1. `String.replaceAll()` — throws `Cannot cast java.lang.String to java.util.function.Function` due to painless casting issues
+2. `String.split()` — throws `dynamic method [java.lang.String, split/1] not found` because painless doesn't whitelist `split`
+
+**Solution:** Used `indexOf` + `substring` to strip suffixes before parsing (`v0.2.3`):
+```painless
+if (doc['field'].size() == 0) return false;
+def v = doc['field'].value.trim();
+def i = v.indexOf(' ');
+Double.parseDouble(i > 0 ? v.substring(0, i) : v) >= params.val
+```
+This handles both clean values (`"249"`) and suffixed values (`"560 kcal"`) by splitting at the first space. The `size() == 0` guard prevents errors on documents missing the field.
+
+**Lesson:** Painless is a restricted subset of Java — always check the [painless API whitelist](https://www.elastic.co/guide/en/elasticsearch/painless/current/painless-api-reference.html) before assuming standard `String` methods are available.
+
+---
+
+## 8. Go RE2 Regex: Negative Lookahead Silently Fails
+
+**Problem:** Comprehension rules for price extraction used negative lookahead to avoid matching time/calorie patterns:
+```regex
+(under|less than)\s+(\d+)(?!\s*(minutes?|mins?|cal))
+```
+Go's `regexp` package uses RE2, which does NOT support lookahead (`(?!...)` or `(?=...)`). When `regexp.Compile()` fails, the comprehension engine logged a warning and skipped the rule — but since all price rules used lookahead, no price filters were ever extracted.
+
+**Solution:** Removed negative lookahead entirely. Instead, rely on rule ordering — more specific rules (prep_time, calories) are defined before the generic price rule. Since comprehension marks consumed character regions, the specific rules consume "under 30 minutes" first, preventing the price rule from re-matching the same text. This is simpler and works correctly with RE2.
+
+**Lesson:** Never use lookahead/lookbehind in Go regex patterns. If disambiguation is needed, use rule ordering + consumed-region tracking instead.
+
+---
+
+## 9. Comprehension Field Names Didn't Match Index Mapping
+
+**Problem:** Comprehension rules used shorthand field names (`prep_time`, `calories`) that didn't match the actual OpenSearch index field names (`preparation_time`, `total_calories`). This caused `No field found for [prep_time] in mapping` errors at query time, even though the filter was correctly extracted from the query text.
+
+Other mismatches discovered:
+- `difficulty_level` stored as `"1"`, `"2"`, `"3"` — not `"easy"`, `"medium"`, `"hard"`
+- `preparation_time` stored in seconds (e.g. `"1800"`) — rules said "30" meaning 30 minutes
+- Sort fields: `created_at` doesn't exist, correct field is `updated_at`
+
+**Solution:** Aligned all comprehension rules (across 8 languages) with actual staging index mapping:
+- `prep_time` → `preparation_time` with multiplier 60 (minutes → seconds)
+- `calories` → `total_calories`
+- `difficulty_level` values: `"easy"` → `"1"`, `"medium"` → `"2"`, `"hard"` → `"3"`
+- Sort field: `created_at` → `updated_at`
+
+**Lesson:** Always verify filter field names against the actual index mapping before deploying comprehension rules. Use `GET /_mapping` to confirm field names and sample documents to confirm stored value formats.
+
+---
+
+## 10. OpenSearch `type` Field Mapping: text vs keyword
+
+**Problem:** QUS stopword and compound loading queries used `term` filters on the `type` field:
+```json
+{ "term": { "type": "SW" } }
+```
+This worked locally where `type` was mapped as `keyword`, but failed on staging where `type` was mapped as `text` with a `.keyword` sub-field. Term queries on `text` fields don't work because the indexed tokens are analyzed (lowercased, etc.), so an exact match on `"SW"` finds nothing.
+
+The result was `locales: 0` — no stopwords or compounds loaded, silently degrading search quality.
+
+**Solution:** Changed term queries in QUS to target `type.keyword` instead of `type` (QUS `v0.2.1`):
+```json
+{ "term": { "type.keyword": "SW" } }
+```
+
+**Lesson:** Always use the `.keyword` sub-field for term queries on fields that might be mapped as `text`. This is forward-compatible — if the field is already `keyword`, the query still works (just without the sub-field). Check `GET /_mapping` to confirm field types on each environment.
