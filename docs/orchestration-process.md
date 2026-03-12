@@ -79,7 +79,7 @@ flowchart LR
 ```mermaid
 flowchart TD
     subgraph OpenSearch Request Body
-        Q[query<br/><b>bool.must</b>: stage query<br/><b>bool.filter</b>: default filters<br/><i>is_addon, is_hidden, hide_on_sold_out</i>]
+        Q[query<br/><b>bool.must</b>: stage query<br/><b>bool.filter</b>: default filters + required filters<br/><i>is_addon, is_hidden, week, menu_key…</i>]
         PF[post_filter<br/><b>bool.filter</b>: user + QUS filters<br/><i>applied AFTER aggs</i>]
         AGG[aggs<br/>per-facet terms aggregation<br/><i>wrapped in filter for self-exclusion</i>]
         SORT[sort + search_after + size]
@@ -114,16 +114,18 @@ Two paths:
 
 ### Filter merging
 
-Three filter layers, applied in order of priority:
+Four filter layers, applied in order of priority:
 
 1. **Default filters** — from `search.yaml` `default_filters`. Applied as `bool.filter` (hard requirements, no scoring). Always present.
    ```
    is_addon=false, is_hidden=false, hide_on_sold_out=false
    ```
 
-2. **User request filters** — from `req.Filters[]`. Applied as `post_filter` (so they don't affect facet counts). Highest priority among user-level filters.
+2. **Required filters** — from `req.RequiredFilters[]`. Also merged into `bool.filter` alongside defaults. Use for structural filters like `week` or `menu_key` that must restrict hit counts and stage fallback decisions.
 
-3. **QUS-inferred filters** — from `qusResp.Filters[]`. Also applied as `post_filter`. Skipped if a request filter already exists for the same field (request wins).
+3. **User request filters** — from `req.Filters[]`. Applied as `post_filter` (so they don't affect facet counts). Highest priority among user-level filters.
+
+4. **QUS-inferred filters** — from `qusResp.Filters[]`. Also applied as `post_filter`. Skipped if a request filter already exists for the same field (request wins).
 
 ### Sort resolution
 
@@ -360,13 +362,14 @@ Range filters use painless scripts because index fields may be stored as keyword
 
 ```
 SearchRequest
-  .Query        → Planner tokenizes (or uses QUS tokens)
-  .Locale       → passed through (not used by orchestrator directly)
-  .Market       → resolves index name
-  .Sort         → resolves sort spec from config
-  .Page.Size    → OpenSearch "size"
-  .Page.Cursor  → decoded to "search_after"
-  .Filters      → post_filter (user filters)
+  .Query           → Planner tokenizes (or uses QUS tokens)
+  .Locale          → passed through (not used by orchestrator directly)
+  .Market          → resolves index name
+  .Sort            → resolves sort spec from config
+  .Page.Size       → OpenSearch "size"
+  .Page.Cursor     → decoded to "search_after"
+  .Filters         → post_filter (user filters)
+  .RequiredFilters → bool.filter (merged with defaults, restricts hit counts)
 
 search.yaml
   .stages       → sequential execution with threshold fallback
