@@ -50,7 +50,7 @@ func testSearchConfig() config.SearchConfig {
 	}
 }
 
-func TestPlanner_BuildPlan_WithQUS(t *testing.T) {
+func TestPlanner_BuildPlan_WithAnalysis(t *testing.T) {
 	planner := NewPlanner(testSearchConfig())
 
 	req := model.SearchRequest{
@@ -61,19 +61,15 @@ func TestPlanner_BuildPlan_WithQUS(t *testing.T) {
 		Sort:   "relevance",
 	}
 
-	qus := &model.QUSAnalyzeResponse{
+	analysis := &model.QueryAnalysis{
 		NormalizedQuery: "cheap chicken burger",
-		Tokens: []model.QUSToken{
-			{Value: "cheap", Normalized: "cheap", Position: 0},
-			{Value: "chicken", Normalized: "chicken", Position: 1},
-			{Value: "burger", Normalized: "burger", Position: 2},
-		},
-		Filters: []model.QUSFilter{
+		Tokens:          []string{"cheap", "chicken", "burger"},
+		Filters: []model.AppliedFilter{
 			{Field: "price", Operator: "lt", Value: float64(10)},
 		},
 	}
 
-	plan := planner.BuildPlan(req, qus)
+	plan := planner.BuildPlan(req, analysis)
 
 	assert.Equal(t, "cheap chicken burger", plan.NormalizedQuery)
 	assert.Equal(t, []string{"cheap", "chicken", "burger"}, plan.Tokens)
@@ -88,7 +84,7 @@ func TestPlanner_BuildPlan_WithQUS(t *testing.T) {
 	assert.Equal(t, "_score", plan.Sort[0].Field)
 }
 
-func TestPlanner_BuildPlan_WithoutQUS(t *testing.T) {
+func TestPlanner_BuildPlan_WithoutAnalysis(t *testing.T) {
 	planner := NewPlanner(testSearchConfig())
 
 	req := model.SearchRequest{
@@ -121,22 +117,22 @@ func TestPlanner_FilterMerging_RequestPriority(t *testing.T) {
 		},
 	}
 
-	qus := &model.QUSAnalyzeResponse{
+	analysis := &model.QueryAnalysis{
 		NormalizedQuery: "chicken",
-		Tokens:          []model.QUSToken{{Value: "chicken", Normalized: "chicken", Position: 0}},
-		Filters: []model.QUSFilter{
+		Tokens:          []string{"chicken"},
+		Filters: []model.AppliedFilter{
 			{Field: "price", Operator: "lt", Value: float64(10)},
 		},
 	}
 
-	plan := planner.BuildPlan(req, qus)
+	plan := planner.BuildPlan(req, analysis)
 
-	// Request filter should win over QUS filter for same field.
+	// Request filter should win over analysis filter for same field.
 	assert.Len(t, plan.UserFilters, 1)
 	assert.Equal(t, float64(5), plan.UserFilters[0].Value)
 }
 
-func TestPlanner_SortResolution_QUSPriority(t *testing.T) {
+func TestPlanner_SortResolution_AnalysisPriority(t *testing.T) {
 	planner := NewPlanner(testSearchConfig())
 
 	req := model.SearchRequest{
@@ -147,15 +143,15 @@ func TestPlanner_SortResolution_QUSPriority(t *testing.T) {
 		Sort:   "relevance",
 	}
 
-	qus := &model.QUSAnalyzeResponse{
+	analysis := &model.QueryAnalysis{
 		NormalizedQuery: "chicken",
-		Tokens:          []model.QUSToken{{Value: "chicken", Normalized: "chicken", Position: 0}},
-		Sort:            &model.QUSSortSpec{Field: "updated_at", Direction: "desc"},
+		Tokens:          []string{"chicken"},
+		Sort:            "newest",
 	}
 
-	plan := planner.BuildPlan(req, qus)
+	plan := planner.BuildPlan(req, analysis)
 
-	// QUS sort should override request sort.
+	// Analysis sort should override request sort.
 	assert.Equal(t, "updated_at", plan.Sort[0].Field)
 	assert.Equal(t, "desc", plan.Sort[0].Direction)
 }

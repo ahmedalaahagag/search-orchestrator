@@ -14,16 +14,16 @@ func NewPlanner(cfg config.SearchConfig) *Planner {
 	return &Planner{cfg: cfg}
 }
 
-func (p *Planner) BuildPlan(req model.SearchRequest, qus *model.QUSAnalyzeResponse) model.SearchPlan {
+func (p *Planner) BuildPlan(req model.SearchRequest, analysis *model.QueryAnalysis) model.SearchPlan {
 	plan := model.SearchPlan{
 		PageSize: req.Page.Size,
 		Market:   req.Market,
 	}
 
-	// Use QUS normalized query if available, otherwise raw query.
-	if qus != nil && qus.NormalizedQuery != "" {
-		plan.NormalizedQuery = qus.NormalizedQuery
-		plan.Tokens = extractTokens(qus)
+	// Use analysis tokens if available, otherwise whitespace-tokenize the raw query.
+	if analysis != nil && analysis.NormalizedQuery != "" {
+		plan.NormalizedQuery = analysis.NormalizedQuery
+		plan.Tokens = analysis.Tokens
 	} else {
 		plan.NormalizedQuery = req.Query
 		plan.Tokens = tokenize(req.Query)
@@ -41,7 +41,7 @@ func (p *Planner) BuildPlan(req model.SearchRequest, qus *model.QUSAnalyzeRespon
 		})
 	}
 
-	// Merge filters: explicit request > QUS-inferred > defaults.
+	// Merge filters: explicit request > analysis-inferred > defaults.
 	// RequiredFilters (e.g. week, menu_key) go into DefaultFilters so they
 	// restrict hit counts and stage fallback, not just post_filter.
 	plan.DefaultFilters = defaultFilters(p.cfg.DefaultFilters)
@@ -50,10 +50,10 @@ func (p *Planner) BuildPlan(req model.SearchRequest, qus *model.QUSAnalyzeRespon
 			Field: f.Field, Operator: f.Operator, Value: f.Value,
 		})
 	}
-	plan.UserFilters = mergeUserFilters(req.Filters, qus)
+	plan.UserFilters = mergeUserFilters(req.Filters, analysis)
 
 	// Resolve sort.
-	plan.Sort = p.resolveSort(req.Sort, qus)
+	plan.Sort = p.resolveSort(req.Sort, analysis)
 
 	// Attach facet config.
 	plan.Facets = p.cfg.Facets
@@ -64,14 +64,6 @@ func (p *Planner) BuildPlan(req model.SearchRequest, qus *model.QUSAnalyzeRespon
 	}
 
 	return plan
-}
-
-func extractTokens(qus *model.QUSAnalyzeResponse) []string {
-	tokens := make([]string, 0, len(qus.Tokens))
-	for _, t := range qus.Tokens {
-		tokens = append(tokens, t.Normalized)
-	}
-	return tokens
 }
 
 func tokenize(query string) []string {
@@ -103,7 +95,7 @@ func defaultFilters(cfgFilters []config.FilterConfig) []model.AppliedFilter {
 	return filters
 }
 
-func mergeUserFilters(reqFilters []model.RequestFilter, qus *model.QUSAnalyzeResponse) []model.AppliedFilter {
+func mergeUserFilters(reqFilters []model.RequestFilter, analysis *model.QueryAnalysis) []model.AppliedFilter {
 	seen := make(map[string]bool)
 	var filters []model.AppliedFilter
 
@@ -117,29 +109,24 @@ func mergeUserFilters(reqFilters []model.RequestFilter, qus *model.QUSAnalyzeRes
 		})
 	}
 
-	// QUS-inferred filters (skip duplicates).
-	if qus != nil {
-		for _, f := range qus.Filters {
+	// Analysis-inferred filters (skip duplicates).
+	if analysis != nil {
+		for _, f := range analysis.Filters {
 			if seen[f.Field] {
 				continue
 			}
 			seen[f.Field] = true
-			filters = append(filters, model.AppliedFilter{
-				Field:    f.Field,
-				Operator: f.Operator,
-				Value:    f.Value,
-			})
+			filters = append(filters, f)
 		}
 	}
 
 	return filters
 }
 
-func (p *Planner) resolveSort(reqSort string, qus *model.QUSAnalyzeResponse) []model.SortSpec {
-	// QUS sort takes priority if present.
-	if qus != nil && qus.Sort != nil {
-		sortKey := qusSortToKey(qus.Sort)
-		if specs, ok := p.cfg.Sorts[sortKey]; ok {
+func (p *Planner) resolveSort(reqSort string, analysis *model.QueryAnalysis) []model.SortSpec {
+	// Analysis sort takes priority if present.
+	if analysis != nil && analysis.Sort != "" {
+		if specs, ok := p.cfg.Sorts[analysis.Sort]; ok {
 			return toSortSpecs(specs)
 		}
 	}
@@ -158,15 +145,6 @@ func (p *Planner) resolveSort(reqSort string, qus *model.QUSAnalyzeResponse) []m
 	return []model.SortSpec{
 		{Field: "_score", Direction: "desc"},
 		{Field: "id", Direction: "asc"},
-	}
-}
-
-func qusSortToKey(s *model.QUSSortSpec) string {
-	switch {
-	case s.Field == "updated_at" && s.Direction == "desc":
-		return "newest"
-	default:
-		return "relevance"
 	}
 }
 

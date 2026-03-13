@@ -10,7 +10,6 @@ import (
 type Config struct {
 	HTTP       HTTPConfig       `envconfig:"HTTP"`
 	OpenSearch OpenSearchConfig `envconfig:"OPENSEARCH"`
-	QUS        QUSConfig        `envconfig:"QUS"`
 	ConfigDir  string           `envconfig:"CONFIG_DIR" default:"configs"`
 }
 
@@ -23,11 +22,6 @@ type OpenSearchConfig struct {
 	Username string        `envconfig:"USERNAME"`
 	Password string        `envconfig:"PASSWORD"`
 	Timeout  time.Duration `envconfig:"TIMEOUT" default:"5s"`
-}
-
-type QUSConfig struct {
-	URL     string        `envconfig:"URL" default:"http://localhost:8080"`
-	Timeout time.Duration `envconfig:"TIMEOUT" default:"3s"`
 }
 
 func Load(prefix string) (Config, error) {
@@ -44,9 +38,6 @@ func (c Config) Validate() error {
 	}
 	if c.OpenSearch.URL == "" {
 		return fmt.Errorf("OpenSearch URL is required")
-	}
-	if c.QUS.URL == "" {
-		return fmt.Errorf("QUS URL is required")
 	}
 	if c.ConfigDir == "" {
 		return fmt.Errorf("config directory is required")

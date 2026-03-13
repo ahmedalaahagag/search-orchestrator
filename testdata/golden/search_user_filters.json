@@ -10,17 +10,11 @@
       { "field": "categories", "operator": "eq", "value": "burgers" }
     ]
   },
-  "qus": {
+  "analysis": {
     "available": true,
     "response": {
-      "originalQuery": "chicken",
       "normalizedQuery": "chicken",
-      "tokens": [
-        { "value": "chicken", "normalized": "chicken", "position": 0 }
-      ],
-      "concepts": [],
-      "filters": [],
-      "warnings": []
+      "tokens": ["chicken"]
     }
   },
   "os": [

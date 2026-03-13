@@ -39,21 +39,20 @@ func New(
 	}
 }
 
-func (o *Orchestrator) Search(ctx context.Context, req model.SearchRequest, qusResp *model.QUSAnalyzeResponse) (*model.SearchResponse, error) {
+func (o *Orchestrator) Search(ctx context.Context, req model.SearchRequest, analysis *model.QueryAnalysis) (*model.SearchResponse, error) {
 	var warnings []string
-	if qusResp != nil {
-		warnings = append(warnings, qusResp.Warnings...)
+	if analysis != nil {
+		warnings = append(warnings, analysis.Warnings...)
 		o.logger.WithFields(logrus.Fields{
-			"normalized_query": qusResp.NormalizedQuery,
-			"tokens":           len(qusResp.Tokens),
-			"concepts":         len(qusResp.Concepts),
-			"filters":          len(qusResp.Filters),
-			"has_sort":         qusResp.Sort != nil,
-		}).Info("QUS analysis result")
+			"normalized_query": analysis.NormalizedQuery,
+			"tokens":           len(analysis.Tokens),
+			"filters":          len(analysis.Filters),
+			"has_sort":         analysis.Sort != "",
+		}).Info("query analysis result")
 	}
 
 	// Build search plan.
-	plan := o.planner.BuildPlan(req, qusResp)
+	plan := o.planner.BuildPlan(req, analysis)
 
 	o.logger.WithFields(logrus.Fields{
 		"tokens":          plan.Tokens,

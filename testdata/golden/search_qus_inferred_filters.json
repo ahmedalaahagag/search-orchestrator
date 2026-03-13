@@ -1,5 +1,5 @@
 {
-  "name": "QUS inferred filters merged",
+  "name": "analysis inferred filters merged",
   "input": {
     "query": "cheap chicken",
     "locale": "en-GB",
@@ -7,20 +7,14 @@
     "sort": "relevance",
     "page": { "size": 24 }
   },
-  "qus": {
+  "analysis": {
     "available": true,
     "response": {
-      "originalQuery": "cheap chicken",
       "normalizedQuery": "cheap chicken",
-      "tokens": [
-        { "value": "cheap", "normalized": "cheap", "position": 0 },
-        { "value": "chicken", "normalized": "chicken", "position": 1 }
-      ],
-      "concepts": [],
+      "tokens": ["cheap", "chicken"],
       "filters": [
-        { "field": "tags", "operator": "eq", "value": "budget-friendly" }
-      ],
-      "warnings": []
+        { "Field": "tags", "Operator": "eq", "Value": "budget-friendly" }
+      ]
     }
   },
   "os": [

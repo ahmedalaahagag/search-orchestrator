@@ -52,12 +52,9 @@ func makeHits(count int) []opensearch.Hit {
 }
 
 func TestOrchestrator_ExactStageSufficient(t *testing.T) {
-	qusResp := &model.QUSAnalyzeResponse{
+	analysis := &model.QueryAnalysis{
 		NormalizedQuery: "chicken burger",
-		Tokens: []model.QUSToken{
-			{Value: "chicken", Normalized: "chicken", Position: 0},
-			{Value: "burger", Normalized: "burger", Position: 1},
-		},
+		Tokens:          []string{"chicken", "burger"},
 	}
 
 	os := &mockOSClient{
@@ -73,7 +70,7 @@ func TestOrchestrator_ExactStageSufficient(t *testing.T) {
 		Market: "uk",
 		Page:   model.PageRequest{Size: 24},
 		Sort:   "relevance",
-	}, qusResp)
+	}, analysis)
 
 	require.NoError(t, err)
 	assert.Equal(t, "exact", resp.Meta.Stage)
@@ -83,12 +80,9 @@ func TestOrchestrator_ExactStageSufficient(t *testing.T) {
 }
 
 func TestOrchestrator_FallbackTriggered(t *testing.T) {
-	qusResp := &model.QUSAnalyzeResponse{
+	analysis := &model.QueryAnalysis{
 		NormalizedQuery: "chicken burger",
-		Tokens: []model.QUSToken{
-			{Value: "chicken", Normalized: "chicken", Position: 0},
-			{Value: "burger", Normalized: "burger", Position: 1},
-		},
+		Tokens:          []string{"chicken", "burger"},
 	}
 
 	os := &mockOSClient{
@@ -105,7 +99,7 @@ func TestOrchestrator_FallbackTriggered(t *testing.T) {
 		Market: "uk",
 		Page:   model.PageRequest{Size: 24},
 		Sort:   "relevance",
-	}, qusResp)
+	}, analysis)
 
 	require.NoError(t, err)
 	assert.Equal(t, "fallback_partial", resp.Meta.Stage)
@@ -114,9 +108,9 @@ func TestOrchestrator_FallbackTriggered(t *testing.T) {
 }
 
 func TestOrchestrator_BothStagesEmpty(t *testing.T) {
-	qusResp := &model.QUSAnalyzeResponse{
+	analysis := &model.QueryAnalysis{
 		NormalizedQuery: "nonexistent",
-		Tokens:          []model.QUSToken{{Value: "nonexistent", Normalized: "nonexistent", Position: 0}},
+		Tokens:          []string{"nonexistent"},
 	}
 
 	os := &mockOSClient{
@@ -133,7 +127,7 @@ func TestOrchestrator_BothStagesEmpty(t *testing.T) {
 		Market: "uk",
 		Page:   model.PageRequest{Size: 24},
 		Sort:   "relevance",
-	}, qusResp)
+	}, analysis)
 
 	require.NoError(t, err)
 	assert.Equal(t, "fallback_partial", resp.Meta.Stage)
@@ -141,7 +135,7 @@ func TestOrchestrator_BothStagesEmpty(t *testing.T) {
 	assert.Empty(t, resp.Items)
 }
 
-func TestOrchestrator_NilQUS_DegradedMode(t *testing.T) {
+func TestOrchestrator_NilAnalysis_DegradedMode(t *testing.T) {
 	os := &mockOSClient{
 		responses: []*opensearch.SearchResponse{
 			{Hits: opensearch.Hits{Total: opensearch.TotalHits{Value: 30}, Hits: makeHits(24)}},
@@ -163,9 +157,9 @@ func TestOrchestrator_NilQUS_DegradedMode(t *testing.T) {
 }
 
 func TestOrchestrator_Pagination_HasNextPage(t *testing.T) {
-	qusResp := &model.QUSAnalyzeResponse{
+	analysis := &model.QueryAnalysis{
 		NormalizedQuery: "chicken",
-		Tokens:          []model.QUSToken{{Value: "chicken", Normalized: "chicken", Position: 0}},
+		Tokens:          []string{"chicken"},
 	}
 
 	os := &mockOSClient{
@@ -181,7 +175,7 @@ func TestOrchestrator_Pagination_HasNextPage(t *testing.T) {
 		Market: "uk",
 		Page:   model.PageRequest{Size: 10},
 		Sort:   "relevance",
-	}, qusResp)
+	}, analysis)
 
 	require.NoError(t, err)
 	assert.True(t, resp.Page.HasNextPage)
@@ -189,9 +183,9 @@ func TestOrchestrator_Pagination_HasNextPage(t *testing.T) {
 }
 
 func TestOrchestrator_Pagination_NoNextPage(t *testing.T) {
-	qusResp := &model.QUSAnalyzeResponse{
+	analysis := &model.QueryAnalysis{
 		NormalizedQuery: "chicken",
-		Tokens:          []model.QUSToken{{Value: "chicken", Normalized: "chicken", Position: 0}},
+		Tokens:          []string{"chicken"},
 	}
 
 	os := &mockOSClient{
@@ -207,16 +201,16 @@ func TestOrchestrator_Pagination_NoNextPage(t *testing.T) {
 		Market: "uk",
 		Page:   model.PageRequest{Size: 24},
 		Sort:   "relevance",
-	}, qusResp)
+	}, analysis)
 
 	require.NoError(t, err)
 	assert.False(t, resp.Page.HasNextPage)
 }
 
 func TestOrchestrator_UserFiltersApplied(t *testing.T) {
-	qusResp := &model.QUSAnalyzeResponse{
+	analysis := &model.QueryAnalysis{
 		NormalizedQuery: "chicken",
-		Tokens:          []model.QUSToken{{Value: "chicken", Normalized: "chicken", Position: 0}},
+		Tokens:          []string{"chicken"},
 	}
 
 	os := &mockOSClient{
@@ -235,7 +229,7 @@ func TestOrchestrator_UserFiltersApplied(t *testing.T) {
 		Filters: []model.RequestFilter{
 			{Field: "categories", Operator: "eq", Value: "burgers"},
 		},
-	}, qusResp)
+	}, analysis)
 
 	require.NoError(t, err)
 	assert.Equal(t, 30, resp.Meta.TotalHits)

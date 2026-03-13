@@ -7,18 +7,11 @@
     "sort": "relevance",
     "page": { "size": 24 }
   },
-  "qus": {
+  "analysis": {
     "available": true,
     "response": {
-      "originalQuery": "chicken burger",
       "normalizedQuery": "chicken burger",
-      "tokens": [
-        { "value": "chicken", "normalized": "chicken", "position": 0 },
-        { "value": "burger", "normalized": "burger", "position": 1 }
-      ],
-      "concepts": [],
-      "filters": [],
-      "warnings": []
+      "tokens": ["chicken", "burger"]
     }
   },
   "os": [

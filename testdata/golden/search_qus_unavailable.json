@@ -1,5 +1,5 @@
 {
-  "name": "nil QUS degraded mode",
+  "name": "nil analysis degraded mode",
   "input": {
     "query": "chicken burger",
     "locale": "en-GB",
@@ -7,7 +7,7 @@
     "sort": "relevance",
     "page": { "size": 24 }
   },
-  "qus": {
+  "analysis": {
     "available": false
   },
   "os": [

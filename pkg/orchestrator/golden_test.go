@@ -19,7 +19,7 @@ import (
 type goldenTestCase struct {
 	Name     string              `json:"name"`
 	Input    goldenInput         `json:"input"`
-	QUS      *goldenQUS          `json:"qus"`
+	Analysis *goldenAnalysis     `json:"analysis"`
 	OS       []goldenOSResponse  `json:"os"`
 	Expected goldenExpected      `json:"expected"`
 }
@@ -33,9 +33,9 @@ type goldenInput struct {
 	Filters []model.RequestFilter `json:"filters,omitempty"`
 }
 
-type goldenQUS struct {
-	Available bool                     `json:"available"`
-	Response  *model.QUSAnalyzeResponse `json:"response,omitempty"`
+type goldenAnalysis struct {
+	Available bool                 `json:"available"`
+	Response  *model.QueryAnalysis `json:"response,omitempty"`
 }
 
 type goldenOSResponse struct {
@@ -109,9 +109,9 @@ func TestGoldenBehavior(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.Name, func(t *testing.T) {
-			var qusResp *model.QUSAnalyzeResponse
-			if tc.QUS != nil && tc.QUS.Available {
-				qusResp = tc.QUS.Response
+			var analysis *model.QueryAnalysis
+			if tc.Analysis != nil && tc.Analysis.Available {
+				analysis = tc.Analysis.Response
 			}
 			osClient := goldenOSClient(tc.OS)
 
@@ -138,7 +138,7 @@ func TestGoldenBehavior(t *testing.T) {
 				req.Sort = "relevance"
 			}
 
-			resp, err := orch.Search(context.Background(), req, qusResp)
+			resp, err := orch.Search(context.Background(), req, analysis)
 			require.NoError(t, err)
 
 			assert.Equal(t, tc.Expected.Stage, resp.Meta.Stage)

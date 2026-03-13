@@ -42,7 +42,6 @@ func runHTTP(cmd *cobra.Command, args []string) error {
 	logger.WithFields(logrus.Fields{
 		"port":       cfg.HTTP.Port,
 		"opensearch": cfg.OpenSearch.URL,
-		"qus":        cfg.QUS.URL,
 	}).Info("configuration loaded")
 
 	metrics := observability.NewMetrics()

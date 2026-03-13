@@ -7,17 +7,11 @@
     "sort": "newest",
     "page": { "size": 24 }
   },
-  "qus": {
+  "analysis": {
     "available": true,
     "response": {
-      "originalQuery": "pizza",
       "normalizedQuery": "pizza",
-      "tokens": [
-        { "value": "pizza", "normalized": "pizza", "position": 0 }
-      ],
-      "concepts": [],
-      "filters": [],
-      "warnings": []
+      "tokens": ["pizza"]
     }
   },
   "os": [

@@ -11,8 +11,6 @@ type Metrics struct {
 	SearchDuration     prometheus.Histogram
 	StageDuration      *prometheus.HistogramVec
 	StageApplied       *prometheus.CounterVec
-	QUSDuration        prometheus.Histogram
-	QUSFailures        prometheus.Counter
 	ResultCount        prometheus.Histogram
 }
 
@@ -44,17 +42,6 @@ func NewMetrics() *Metrics {
 			Name: "search_stage_applied_total",
 			Help: "Which search stage was used for the final result.",
 		}, []string{"stage"}),
-
-		QUSDuration: factory.NewHistogram(prometheus.HistogramOpts{
-			Name:    "search_qus_duration_seconds",
-			Help:    "QUS call latency in seconds.",
-			Buckets: []float64{0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1},
-		}),
-
-		QUSFailures: factory.NewCounter(prometheus.CounterOpts{
-			Name: "search_qus_failures_total",
-			Help: "Total number of QUS call failures (degraded mode).",
-		}),
 
 		ResultCount: factory.NewHistogram(prometheus.HistogramOpts{
 			Name:    "search_result_count",

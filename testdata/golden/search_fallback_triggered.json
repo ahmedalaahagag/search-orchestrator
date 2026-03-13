@@ -7,19 +7,11 @@
     "sort": "relevance",
     "page": { "size": 24 }
   },
-  "qus": {
+  "analysis": {
     "available": true,
     "response": {
-      "originalQuery": "organic quinoa salad",
       "normalizedQuery": "organic quinoa salad",
-      "tokens": [
-        { "value": "organic", "normalized": "organic", "position": 0 },
-        { "value": "quinoa", "normalized": "quinoa", "position": 1 },
-        { "value": "salad", "normalized": "salad", "position": 2 }
-      ],
-      "concepts": [],
-      "filters": [],
-      "warnings": []
+      "tokens": ["organic", "quinoa", "salad"]
     }
   },
   "os": [
