@@ -4,19 +4,23 @@ A log of significant problems encountered during development and how they were r
 
 ---
 
-## 1. Tight Coupling: Orchestrator Owned the QUS Client
+## 1. Tight Coupling: Orchestrator Was Coupled to QUS
 
-**Problem:** The orchestrator originally created and managed its own QUS (Query Understanding Service) HTTP client internally. This meant:
-- The orchestrator had a hard dependency on a specific QUS endpoint and transport
-- Callers couldn't use their own QUS client, mock it, or skip it
-- Testing required mocking an HTTP client the orchestrator owned
-- The orchestrator mixed two concerns: search execution and query understanding
+**Problem:** The orchestrator originally had a hard dependency on the QUS (Query Understanding Service). This evolved through two phases:
 
-**Solution:** Removed the QUS client entirely from the orchestrator in two steps:
-1. Changed `Search()` to accept `*model.QUSAnalyzeResponse` as an input parameter instead of calling QUS internally (`3576c78`)
+**Phase 1 — Owned the QUS client:** The orchestrator created and managed its own QUS HTTP client internally. Callers couldn't use their own client, mock it, or skip it. Testing required mocking an HTTP client the orchestrator owned.
+
+**Phase 2 — Used QUS-specific types:** After removing the HTTP client, `Search()` still accepted `*model.QUSAnalyzeResponse` with QUS-specific types (`QUSToken`, `QUSConcept`, `QUSFilter`, `QUSSortSpec`). Callers had to construct QUS types even without a QUS service. The `pkg/config` and `pkg/observability` packages also contained QUS-specific config and metrics.
+
+**Solution:** Decoupled in three steps:
+1. Changed `Search()` to accept `*model.QUSAnalyzeResponse` instead of calling QUS internally (`3576c78`)
 2. Deleted the `pkg/qus` package entirely (`0c0dc97`)
+3. Replaced all QUS-specific types with a generic `*model.QueryAnalysis` (`d3b3a0e`, v0.3.0):
+   - `QueryAnalysis{NormalizedQuery, Tokens []string, Filters []AppliedFilter, Sort string, Warnings}`
+   - Removed `QUSConfig` from `pkg/config/` and QUS metrics from `pkg/observability/`
+   - Callers map their upstream (QUS, custom NLP, etc.) → `QueryAnalysis` before calling `Search()`
 
-Now callers bring their own QUS. Pass `nil` to skip QUS and use raw whitespace tokenization. This follows dependency inversion — the orchestrator depends on a data contract (the QUS response struct), not a transport implementation.
+Pass `nil` to skip analysis and use raw whitespace tokenization. The orchestrator is now fully agnostic to the upstream query understanding system.
 
 ---
 
@@ -88,7 +92,7 @@ The `doc['field'].size() > 0` guard prevents errors on documents missing the fie
 - What OpenSearch query body was actually sent
 
 **Solution:** Added structured logging at key decision points (`5c0b483`, `48a30ca`):
-- **QUS analysis result:** Logs token count, concept count, filter count, and whether QUS provided a sort override
+- **Query analysis result:** Logs token count, filter count, and whether analysis provided a sort override
 - **Search plan:** Logs tokens, filter counts (default vs. user), sort config, stage count, and market
 - **Stage execution:** Logs stage name, target index, tokens, and query mode before each OpenSearch call
 - **Stage result:** Logs hit count vs. minimum threshold after each stage
