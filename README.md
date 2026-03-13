@@ -95,7 +95,7 @@ func main() {
     planner := orchestrator.NewPlanner(searchCfg)
     orch := orchestrator.New(logger, metrics, osClient, planner, searchCfg)
 
-    // Search.
+    // Search without query analysis — uses whitespace tokenization.
     resp, err := orch.Search(context.Background(),
         model.SearchRequest{
             Query:  "chicken",
@@ -104,7 +104,7 @@ func main() {
             Page:   model.PageRequest{Size: 24},
             Sort:   "relevance",
         },
-        nil, // no QUS — uses whitespace tokenization
+        nil,
     )
     if err != nil {
         log.Fatal(err)
@@ -160,34 +160,50 @@ resp, _ := orch.Search(ctx, model.SearchRequest{
 
 User filters are applied as `post_filter` so they don't affect facet counts.
 
-### 5. QUS integration (optional)
+### 5. Query analysis (optional)
 
-If you have a Query Understanding Service, pass its output to influence tokenization, filters, and sort:
+Pass pre-processed query understanding to influence tokenization, filters, and sort. The orchestrator is agnostic to the upstream system — any NLP service, QUS, or custom logic can produce a `QueryAnalysis`:
 
 ```go
-qusResult := &model.QUSAnalyzeResponse{
+analysis := &model.QueryAnalysis{
     NormalizedQuery: "chicken burger",
-    Tokens: []model.QUSToken{
-        {Value: "chicken", Normalized: "chicken", Position: 0},
-        {Value: "burger", Normalized: "burger", Position: 1},
-    },
-    Filters: []model.QUSFilter{
+    Tokens:          []string{"chicken", "burger"},
+    Filters: []model.AppliedFilter{
         {Field: "tags", Operator: "eq", Value: "budget-friendly"},
     },
+    Sort: "newest", // must match a key in search.yaml sorts
 }
 
-resp, err := orch.Search(ctx, req, qusResult)
+resp, err := orch.Search(ctx, req, analysis)
 ```
 
 When `nil` is passed, the orchestrator tokenizes the raw query by whitespace.
+
+### 6. Required filters
+
+Use `RequiredFilters` for structural constraints (e.g. week, menu) that must restrict hit counts and stage fallback — not just post-filtering:
+
+```go
+resp, _ := orch.Search(ctx, model.SearchRequest{
+    Query:  "chicken",
+    Locale: "en-US",
+    Market: "us",
+    Page:   model.PageRequest{Size: 24},
+    RequiredFilters: []model.RequestFilter{
+        {Field: "week", Operator: "eq", Value: "2026-W11"},
+    },
+}, nil)
+```
+
+Required filters are merged into `bool.filter` alongside default filters.
 
 ## How It Works
 
 Stages execute sequentially. Each builds an OpenSearch query from the tokenized input and configured fields. The first stage that meets its `minimum_hits` threshold wins. If none do, the last stage's results are returned.
 
 ```
-Request + QUS → Planner → SearchPlan → Stage 1 (exact) → 3 hits (need 24) → skip
-                                      → Stage 2 (partial) → 47 hits (need 1) → return
+Request + Analysis → Planner → SearchPlan → Stage 1 (exact) → 3 hits (need 24) → skip
+                                           → Stage 2 (partial) → 47 hits (need 1) → return
 ```
 
 **Query strategy per token:** `dis_max` across all configured fields — each field gets an individual `match` query with its boost weight.
@@ -199,7 +215,7 @@ Request + QUS → Planner → SearchPlan → Stage 1 (exact) → 3 hits (need 24
 | Package | Description |
 |---|---|
 | `pkg/config` | Load and parse `search.yaml` |
-| `pkg/model` | Domain types: request, response, search plan, QUS types |
+| `pkg/model` | Domain types: request, response, search plan, query analysis |
 | `pkg/orchestrator` | Core orchestration with multi-stage fallback |
 | `pkg/query` | OpenSearch DSL builder |
 | `pkg/opensearch` | OpenSearch HTTP client |
