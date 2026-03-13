@@ -10,12 +10,12 @@ How a search request flows through the orchestrator, from input to OpenSearch re
 flowchart TD
     subgraph Inputs
         REQ[SearchRequest]
-        QUS[QUSAnalyzeResponse<br/><i>optional</i>]
+        QA[QueryAnalysis<br/><i>optional</i>]
         CFG[search.yaml]
     end
 
     REQ --> PLAN
-    QUS -.-> PLAN
+    QA -.-> PLAN
     CFG --> PLAN
 
     PLAN[<b>Planner.BuildPlan</b><br/>Tokenize query<br/>Merge filters<br/>Resolve sort<br/>Decode cursor]
@@ -41,7 +41,7 @@ flowchart TD
     MAP --> RESP[SearchResponse<br/><i>items, facets, page, meta</i>]
 
     style REQ fill:#e1f0ff,stroke:#4a90d9
-    style QUS fill:#e1f0ff,stroke:#4a90d9,stroke-dasharray: 5 5
+    style QA fill:#e1f0ff,stroke:#4a90d9,stroke-dasharray: 5 5
     style CFG fill:#fff3e0,stroke:#f5a623
     style SP fill:#f0f0f0,stroke:#888
     style OS fill:#e8f5e9,stroke:#4caf50
@@ -80,7 +80,7 @@ flowchart LR
 flowchart TD
     subgraph OpenSearch Request Body
         Q[query<br/><b>bool.must</b>: stage query<br/><b>bool.filter</b>: default filters + required filters<br/><i>is_addon, is_hidden, week, menu_key…</i>]
-        PF[post_filter<br/><b>bool.filter</b>: user + QUS filters<br/><i>applied AFTER aggs</i>]
+        PF[post_filter<br/><b>bool.filter</b>: user + analysis filters<br/><i>applied AFTER aggs</i>]
         AGG[aggs<br/>per-facet terms aggregation<br/><i>wrapped in filter for self-exclusion</i>]
         SORT[sort + search_after + size]
     end
@@ -99,7 +99,7 @@ flowchart TD
 
 ## Step 1: Planning
 
-**Entry point:** `Planner.BuildPlan(req, qusResp) → SearchPlan`
+**Entry point:** `Planner.BuildPlan(req, analysis) → SearchPlan`
 
 The planner converts a raw search request into a fully resolved execution plan. Every decision the orchestrator needs is captured in the `SearchPlan` struct — no config lookups happen during execution.
 
@@ -107,10 +107,10 @@ The planner converts a raw search request into a fully resolved execution plan. 
 
 Two paths:
 
-| QUS provided | QUS nil |
+| Analysis provided | Analysis nil |
 |---|---|
-| Uses `qusResp.Tokens[].Normalized` | Splits `req.Query` by whitespace |
-| Normalized query from QUS | Raw query string |
+| Uses `analysis.Tokens` (already `[]string`) | Splits `req.Query` by whitespace |
+| Normalized query from analysis | Raw query string |
 
 ### Filter merging
 
@@ -125,12 +125,12 @@ Four filter layers, applied in order of priority:
 
 3. **User request filters** — from `req.Filters[]`. Applied as `post_filter` (so they don't affect facet counts). Highest priority among user-level filters.
 
-4. **QUS-inferred filters** — from `qusResp.Filters[]`. Also applied as `post_filter`. Skipped if a request filter already exists for the same field (request wins).
+4. **Analysis-inferred filters** — from `analysis.Filters[]`. Also applied as `post_filter`. Skipped if a request filter already exists for the same field (request wins).
 
 ### Sort resolution
 
 Priority order:
-1. QUS sort override (`qusResp.Sort`) — mapped to a named sort key (e.g. `newest`)
+1. Analysis sort override (`analysis.Sort`) — a sort key name matching `search.yaml` sorts (e.g. `"newest"`)
 2. Request sort (`req.Sort`) — must match a key in `search.yaml` `sorts`
 3. Default — `relevance` (score desc, id asc)
 
@@ -216,7 +216,7 @@ Wraps the text query with all supporting clauses:
   },
   "post_filter": {
     "bool": {
-      "filter": [ ... user + QUS filters ... ]
+      "filter": [ ... user + analysis filters ... ]
     }
   },
   "aggs": { ... facet aggregations ... },
@@ -342,7 +342,7 @@ Each configured facet is extracted from the aggregation response:
 
 - `totalHits` — from OpenSearch `hits.total.value`
 - `stage` — name of the winning stage (useful for debugging/monitoring)
-- `warnings` — forwarded from QUS response (e.g. QUS degradation warnings)
+- `warnings` — forwarded from query analysis (e.g. upstream degradation warnings)
 
 ---
 
@@ -362,7 +362,7 @@ Range filters use painless scripts because index fields may be stored as keyword
 
 ```
 SearchRequest
-  .Query           → Planner tokenizes (or uses QUS tokens)
+  .Query           → Planner tokenizes (or uses analysis tokens)
   .Locale          → passed through (not used by orchestrator directly)
   .Market          → resolves index name
   .Sort            → resolves sort spec from config
@@ -378,9 +378,10 @@ search.yaml
   .sorts        → named sort definitions
   .facets       → terms aggregations with self-exclusion
 
-QUSAnalyzeResponse (optional)
-  .Tokens       → override tokenization
-  .Filters      → merged into post_filter (lower priority than request filters)
-  .Sort         → override sort selection
-  .Warnings     → forwarded to response metadata
+QueryAnalysis (optional)
+  .NormalizedQuery → override raw query
+  .Tokens          → override tokenization ([]string)
+  .Filters         → merged into post_filter (lower priority than request filters)
+  .Sort            → override sort selection (sort key name)
+  .Warnings        → forwarded to response metadata
 ```
