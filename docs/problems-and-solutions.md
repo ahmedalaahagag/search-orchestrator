@@ -182,3 +182,67 @@ The result was `locales: 0` — no stopwords or compounds loaded, silently degra
 ```
 
 **Lesson:** Always use the `.keyword` sub-field for term queries on fields that might be mapped as `text`. This is forward-compatible — if the field is already `keyword`, the query still works (just without the sub-field). Check `GET /_mapping` to confirm field types on each environment.
+
+---
+
+## 11. Product Index Mapping Lost During Cross-Cluster Copy
+
+**Problem:** Product indexes were copied from MXP staging to the test cluster using scroll+bulk API. The copy script created the destination index on-the-fly (auto-created by OpenSearch on first bulk insert), which resulted in **dynamic mapping** — OpenSearch inferred basic types (`text` + `keyword`) for all string fields.
+
+The original MXP staging mapping had rich multi-field definitions per searchable field:
+
+| Sub-field | Analyzer | Purpose |
+|---|---|---|
+| `title` (base) | — | `keyword` for exact match and aggregations |
+| `title.concept` | `concept_analyzer` (keyword tokenizer + lowercase) | Full title as single token for concept matching |
+| `title.shingle` | `shingle_analyzer` (standard + porter_stem + shingle 2–4) | Word n-gram phrase matching |
+| `title.text` | `text_analyzer` (standard + porter_stem + stopwords) | Standard full-text search |
+| `title.filter` | `filter_analyzer` (standard + lowercase) | Filtering |
+
+All 4 custom analyzers (`concept_analyzer`, `shingle_analyzer`, `text_analyzer`, `filter_analyzer`) and their token filters (`shingle_filter`, `EnglishPossessiveFilter`, `custom_sw_filter`) were also lost.
+
+Since the orchestrator queries `title.concept`, `title.shingle`, `title.text` etc., and OpenSearch silently returns 0 hits for non-existent fields, **every search returned 0 results** even for complete words like "chicken".
+
+**Solution:** Re-copied all product indexes by:
+1. Fetching the full mapping + settings (including analyzers) from the source index via `GET /{index}`
+2. Creating the destination index with the correct mapping before inserting any docs via `PUT /{index}` with the mapping body
+3. Then bulk-inserting documents via scroll+bulk as before
+
+**Lesson:** When copying indexes across clusters, always create the destination index with the source mapping and settings first. Auto-created indexes from dynamic mapping lose custom analyzers, multi-field definitions, and field type overrides. The `_reindex` API within the same cluster preserves mappings, but scroll+bulk across clusters does not.
+
+---
+
+## 12. Partial/Prefix Search Returns 0 Hits for Incomplete Words
+
+**Problem:** Typing "chi", "chic", or "chick" (building towards "chicken") returned 0 results across all search stages. This affected search-as-you-type behavior.
+
+Root cause: all search stages used `match` queries, which compare analyzed tokens. The `text_analyzer` uses Porter stemming:
+- "chi" → stem "chi" ≠ "chicken" → **no match**
+- "chick" → stem "chick" ≠ "chicken" → **no match**
+- "chicken" → stem "chicken" = "chicken" → **match**
+
+`match` queries are token-based, not prefix-based. There is no overlap between the indexed term "chicken" and the search term "chi" — they are entirely different tokens.
+
+**Solution:** Added a third search stage `fallback_prefix` with `query_mode: "prefix"`:
+
+```yaml
+- name: fallback_prefix
+  minimum_hits: 1
+  query_mode: prefix
+  fields:
+    - { name: title.text, boost: 100 }
+    - { name: categories.text, boost: 90 }
+    - { name: ingredients.text, boost: 80 }
+    # ... other .text fields
+```
+
+The `prefix` query mode uses OpenSearch `prefix` queries instead of `match`:
+```json
+{ "prefix": { "title.text": { "value": "chi", "boost": 100 } } }
+```
+
+This scans the term dictionary for terms starting with "chi", which matches "chicken", "chipotle", etc.
+
+The stage only activates when both `exact` and `fallback_partial` return 0 hits, so it has no impact on normal searches with complete words.
+
+**Lesson:** `match` queries only find exact analyzed tokens, not prefixes. For search-as-you-type, use `prefix` queries, `match_phrase_prefix`, edge-ngram analyzers, or `search_as_you_type` field type. A prefix fallback stage is the least invasive option since it doesn't require mapping changes or re-indexing.

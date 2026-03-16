@@ -1,4 +1,4 @@
-index: hellofresh_{market}_productsonline
+index: hellofresh_{market}_products_a
 
 stages:
   - name: exact
@@ -27,7 +27,7 @@ stages:
   - name: fallback_partial
     minimum_hits: 1
     query_mode: partial
-    omit_percentage: 34
+    omit_percentage: 50
     max_term_count: 12
     fields:
       - { name: title.concept, boost: 150 }
@@ -50,7 +50,21 @@ stages:
       - { name: description.shingle, boost: 50 }
       - { name: description.text, boost: 20 }
 
+  - name: fallback_prefix
+    minimum_hits: 1
+    query_mode: prefix
+    max_term_count: 12
+    fields:
+      - { name: title.text, boost: 100 }
+      - { name: categories.text, boost: 90 }
+      - { name: ingredients.text, boost: 80 }
+      - { name: tags.text, boost: 70 }
+      - { name: recipe_cuisine.text, boost: 80 }
+      - { name: headline.text, boost: 60 }
+      - { name: description.text, boost: 20 }
+
 default_filters:
+  - { field: active, operator: eq, value: true }
   - { field: is_addon, operator: eq, value: false }
   - { field: is_hidden, operator: eq, value: false }
   - { field: hide_on_sold_out, operator: eq, value: false }
@@ -58,6 +72,9 @@ default_filters:
 sorts:
   relevance:
     - { field: _score, direction: desc }
+    - { field: id, direction: asc }
+  index:
+    - { field: index, direction: asc }
     - { field: id, direction: asc }
   newest:
     - { field: updated_at, direction: desc }

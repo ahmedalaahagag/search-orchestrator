@@ -162,6 +162,14 @@ Stage "exact" → 3 hits (need 24) → below threshold, try next
 Stage "fallback_partial" → 47 hits (need 1) → threshold met, return
 ```
 
+If no stage meets its threshold (e.g. partial/incomplete tokens like "chi"):
+
+```
+Stage "exact" → 0 hits (need 24) → skip
+Stage "fallback_partial" → 0 hits (need 1) → skip
+Stage "fallback_prefix" → 851 hits (need 1) → return (prefix matched "chicken", "chipotle", etc.)
+```
+
 ### Per-stage query building
 
 Each stage goes through two steps:
@@ -192,6 +200,7 @@ Tokens are truncated to `MaxTermCount` if needed.
 |---|---|---|
 | `exact` | `bool.must` with one `dis_max` per token | Every token must match at least one field |
 | `partial` | `bool.should` with `minimum_should_match` | Allows `omit_percentage`% of tokens to not match |
+| `prefix` | `bool.should` with `prefix` per field per token | Matches terms starting with the token (search-as-you-type fallback) |
 
 For partial mode, `minimum_should_match` is calculated as:
 ```
@@ -310,7 +319,7 @@ When `exclude_self: true`, the aggregation is wrapped in a `filter` aggregation 
 
 ### Index resolution
 
-The index pattern from config (e.g. `hellofresh_{market}_productsonline`) has `{market}` replaced with the lowercased market from the request.
+The index pattern from config (e.g. `hellofresh_{market}_products_a`) has `{market}` replaced with the lowercased market from the request.
 
 ---
 

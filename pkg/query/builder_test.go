@@ -100,6 +100,50 @@ func TestBuildStageQuery_PartialMode_SingleToken_FallsBackToMust(t *testing.T) {
 	assert.True(t, hasMust, "single token partial should fall back to must")
 }
 
+func TestBuildStageQuery_PrefixMode(t *testing.T) {
+	stage := model.SearchStage{
+		Name:      "prefix",
+		QueryMode: "prefix",
+		Fields:    testFields,
+	}
+
+	q := BuildStageQuery([]string{"chi"}, stage)
+	raw, err := json.Marshal(q)
+	require.NoError(t, err)
+
+	var result map[string]any
+	require.NoError(t, json.Unmarshal(raw, &result))
+
+	boolQ := result["bool"].(map[string]any)
+	should := boolQ["should"].([]any)
+	assert.Len(t, should, 2) // one prefix per field
+
+	// Verify it uses prefix, not match
+	first := should[0].(map[string]any)
+	assert.Contains(t, first, "prefix")
+
+	assert.Equal(t, float64(1), boolQ["minimum_should_match"])
+}
+
+func TestBuildStageQuery_PrefixMode_MultipleTokens(t *testing.T) {
+	stage := model.SearchStage{
+		Name:      "prefix",
+		QueryMode: "prefix",
+		Fields:    testFields,
+	}
+
+	q := BuildStageQuery([]string{"chi", "burg"}, stage)
+	raw, err := json.Marshal(q)
+	require.NoError(t, err)
+
+	var result map[string]any
+	require.NoError(t, json.Unmarshal(raw, &result))
+
+	boolQ := result["bool"].(map[string]any)
+	should := boolQ["should"].([]any)
+	assert.Len(t, should, 4) // 2 tokens * 2 fields
+}
+
 func TestBuildStageQuery_EmptyTokens(t *testing.T) {
 	stage := model.SearchStage{
 		Name:      "exact",

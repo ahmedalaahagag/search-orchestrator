@@ -208,6 +208,8 @@ Request + Analysis → Planner → SearchPlan → Stage 1 (exact) → 3 hits (ne
 
 **Query strategy per token:** `dis_max` across all configured fields — each field gets an individual `match` query with its boost weight.
 
+**Query modes:** `exact` (all tokens must match), `partial` (some tokens can be omitted), `prefix` (prefix matching for search-as-you-type fallback).
+
 **Filter operators:** `eq` (term), `in` (terms), `gt`/`gte`/`lt`/`lte` (range).
 
 ## Packages

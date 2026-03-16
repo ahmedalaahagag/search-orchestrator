@@ -20,6 +20,10 @@ func BuildStageQuery(tokens []string, stage model.SearchStage) Query {
 		return Query{"match_all": Query{}}
 	}
 
+	if stage.QueryMode == "prefix" {
+		return prefixQuery(tokens, stage.Fields)
+	}
+
 	if stage.QueryMode == "partial" && stage.OmitPercentage > 0 {
 		return partialMatchQuery(tokens, stage.Fields, stage.OmitPercentage)
 	}
@@ -78,6 +82,30 @@ func tokenDisMax(token string, fields []config.FieldConfig) Query {
 	return Query{
 		"dis_max": Query{
 			"queries": queries,
+		},
+	}
+}
+
+// prefixQuery builds a should query where each token uses prefix matching on all fields.
+// Used as a last-resort fallback for partial/incomplete tokens (search-as-you-type).
+func prefixQuery(tokens []string, fields []config.FieldConfig) Query {
+	should := make([]any, 0, len(tokens)*len(fields))
+	for _, token := range tokens {
+		for _, f := range fields {
+			should = append(should, Query{
+				"prefix": Query{
+					f.Name: Query{
+						"value": token,
+						"boost": f.Boost,
+					},
+				},
+			})
+		}
+	}
+	return Query{
+		"bool": Query{
+			"should":               should,
+			"minimum_should_match": 1,
 		},
 	}
 }
